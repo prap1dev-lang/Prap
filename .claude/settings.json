@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /B \"d:\\\\websitem\\\\Prap\")",
+      "Bash(cd /d \"d:\\\\websitem\\\\Prap\")",
+      "Bash(dir /S /B src)",
+      "Bash(findstr /V \"node_modules\")",
+      "PowerShell(Get-ChildItem -Path \"d:\\\\websitem\\\\Prap\\\\src\" -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"d:\\\\websitem\\\\Prap\\\\\", \"\"\\) })"
+    ]
+  }
+}
