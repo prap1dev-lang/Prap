@@ -47,6 +47,16 @@ body {
   .badge {
     @apply inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 px-2.5 py-1 text-xs font-semibold;
   }
+  /* Any .card that wraps a wide <table> scrolls horizontally on small screens
+     instead of breaking the layout. Admin tables rely on this. */
+  .card:has(> table),
+  .card:has(> form > table) {
+    @apply overflow-x-auto;
+  }
+  .card > table,
+  .card > form > table {
+    @apply min-w-[640px];
+  }
   .section {
     @apply py-16 md:py-24;
   }
