@@ -26,18 +26,24 @@ export async function POST(req: Request) {
   const { phone, accessToken, redirectTo, mode } = parsed.data;
 
   // Step 1: validate the access-token with MSG91 (security-critical).
-  try {
-    await verifyWidgetAccessToken(accessToken);
-  } catch (e: any) {
-    const isW = e instanceof WidgetVerifyError;
-    return NextResponse.json(
-      {
-        ok: false,
-        error: e?.message || "Phone verification failed",
-        provider: isW ? { name: "msg91-widget", status: e.status, detail: e.detail } : undefined,
-      },
-      { status: isW ? 502 : 500 },
-    );
+  // Dev bypass: accept the placeholder token from the client-side bypass.
+  const devBypass = process.env.MSG91_DEV_BYPASS === "true";
+  if (devBypass && accessToken === "dev-bypass-token") {
+    console.warn(`[MSG91 DEV BYPASS] /api/auth/widget/verify accepting bypass token for ${phone}`);
+  } else {
+    try {
+      await verifyWidgetAccessToken(accessToken);
+    } catch (e: any) {
+      const isW = e instanceof WidgetVerifyError;
+      return NextResponse.json(
+        {
+          ok: false,
+          error: e?.message || "Phone verification failed",
+          provider: isW ? { name: "msg91-widget", status: e.status, detail: e.detail } : undefined,
+        },
+        { status: isW ? 502 : 500 },
+      );
+    }
   }
 
   // Step 2: ensure the Supabase auth user exists for this phone.

@@ -41,11 +41,19 @@ type UseWidgetReturn = {
 export function useMsg91Widget(): UseWidgetReturn {
   const widgetId = process.env.NEXT_PUBLIC_MSG91_WIDGET_ID;
   const tokenAuth = process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH;
-  const [status, setStatus] = useState<Status>("loading");
+  const bypass = process.env.NEXT_PUBLIC_MSG91_DEV_BYPASS === "true";
+  const [status, setStatus] = useState<Status>(bypass ? "ready" : "loading");
   const [error, setError] = useState<string | null>(null);
   const accessTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Dev bypass — never load the MSG91 script.
+    if (bypass) {
+      console.warn("[MSG91 DEV BYPASS] Widget skipped. Use OTP 123456 to verify.");
+      setStatus("ready");
+      return;
+    }
+
     if (!widgetId || !tokenAuth) {
       setStatus("error");
       setError(
@@ -125,11 +133,14 @@ export function useMsg91Widget(): UseWidgetReturn {
   return {
     status,
     error,
-    send: (mobile) =>
-      new Promise<void>((resolve, reject) => {
+    send: async (mobile) => {
+      if (bypass) {
+        console.warn(`[MSG91 DEV BYPASS] Pretending to SMS ${mobile}. Use 123456 to verify.`);
+        return;
+      }
+      return new Promise<void>((resolve, reject) => {
         try {
           ensureReady();
-          // MSG91 expects identifier as country-code + number, NO leading "+".
           const id = mobile.replace(/^\+/, "");
           window.sendOtp!(
             id,
@@ -139,16 +150,20 @@ export function useMsg91Widget(): UseWidgetReturn {
         } catch (e: any) {
           reject(e);
         }
-      }),
+      });
+    },
 
-    verify: (otp) =>
-      new Promise<string>((resolve, reject) => {
+    verify: async (otp) => {
+      if (bypass) {
+        if (otp !== "123456") throw new Error("Invalid OTP (bypass: enter 123456)");
+        return "dev-bypass-token";
+      }
+      return new Promise<string>((resolve, reject) => {
         try {
           ensureReady();
           window.verifyOtp!(
             otp,
             (data: any) => {
-              // data.message contains the access-token on success.
               const token = data?.message || accessTokenRef.current;
               if (!token) return reject(new Error("MSG91 returned no access token"));
               resolve(String(token));
@@ -158,10 +173,15 @@ export function useMsg91Widget(): UseWidgetReturn {
         } catch (e: any) {
           reject(e);
         }
-      }),
+      });
+    },
 
-    resend: (voice = false) =>
-      new Promise<void>((resolve, reject) => {
+    resend: async (voice = false) => {
+      if (bypass) {
+        console.warn("[MSG91 DEV BYPASS] Resend skipped. Code is still 123456.");
+        return;
+      }
+      return new Promise<void>((resolve, reject) => {
         try {
           ensureReady();
           window.retryOtp!(
@@ -172,6 +192,7 @@ export function useMsg91Widget(): UseWidgetReturn {
         } catch (e: any) {
           reject(e);
         }
-      }),
+      });
+    },
   };
 }
