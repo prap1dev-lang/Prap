@@ -1,9 +1,13 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, ShieldCheck, AlertTriangle, Lock, Mail } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase";
+
+// Don't prerender — this page reads searchParams and signs the user in
+// against Supabase, which is inherently per-request.
+export const dynamic = "force-dynamic";
 
 /**
  * Admin sign-in. Separate from the public phone-OTP flow.
@@ -13,6 +17,14 @@ import { supabaseBrowser } from "@/lib/supabase";
  *     them to role='admin' on the first /admin visit.
  */
 export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <AdminLoginInner />
+    </Suspense>
+  );
+}
+
+function AdminLoginInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") || "/admin";
@@ -33,7 +45,6 @@ export default function AdminLoginPage() {
     try {
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
       if (signInErr) throw signInErr;
-      // Hard nav so the server picks up the new cookies on /admin.
       window.location.href = next;
     } catch (e: any) {
       setError(e?.message || "Sign-in failed");
@@ -41,6 +52,76 @@ export default function AdminLoginPage() {
     }
   }
 
+  return (
+    <Shell>
+      <h1 className="text-3xl font-extrabold tracking-tight">Admin sign-in</h1>
+      <p className="mt-2 text-ink-700">Use the credentials set in Supabase Auth.</p>
+
+      <form onSubmit={submit} className="mt-6 space-y-4">
+        <div>
+          <label className="label">Email</label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-500" />
+            <input
+              className="input !pl-9"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@prap.in"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="label">Password</label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-500" />
+            <input
+              className="input !pl-9"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 mt-0.5 flex-none" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <button className="btn-primary w-full" disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in to admin"}
+        </button>
+      </form>
+
+      <p className="mt-6 text-xs text-ink-500">
+        This is the admin panel sign-in.{" "}
+        <Link href="/auth/login" className="underline">User login</Link> ·{" "}
+        <Link href="/" className="underline">Back to site</Link>
+      </p>
+    </Shell>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <Shell>
+      <div className="min-h-[300px] grid place-items-center">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+      </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       <aside className="hidden lg:flex flex-col justify-between bg-ink-950 text-white p-10 relative overflow-hidden">
@@ -67,60 +148,7 @@ export default function AdminLoginPage() {
       </aside>
 
       <main className="grid place-items-center p-6 md:p-10 bg-offwhite">
-        <div className="w-full max-w-md">
-          <h1 className="text-3xl font-extrabold tracking-tight">Admin sign-in</h1>
-          <p className="mt-2 text-ink-700">Use the credentials set in Supabase Auth.</p>
-
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            <div>
-              <label className="label">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-500" />
-                <input
-                  className="input !pl-9"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@prap.in"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="label">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-500" />
-                <input
-                  className="input !pl-9"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5 flex-none" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <button className="btn-primary w-full" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in to admin"}
-            </button>
-          </form>
-
-          <p className="mt-6 text-xs text-ink-500">
-            This is the admin panel sign-in. <Link href="/auth/login" className="underline">User login</Link> ·{" "}
-            <Link href="/" className="underline">Back to site</Link>
-          </p>
-        </div>
+        <div className="w-full max-w-md">{children}</div>
       </main>
     </div>
   );
