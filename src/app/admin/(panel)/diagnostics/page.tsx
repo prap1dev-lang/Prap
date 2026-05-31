@@ -52,7 +52,7 @@ export default function DiagnosticsPage() {
       <section className="card p-6">
         <h2 className="font-bold">Send OTP</h2>
         <p className="text-sm text-ink-500 mt-1">
-          Set <code>MSG91_DEV_BYPASS=false</code> in <code>.env.local</code> and
+          Set <code>MSG91_DEV_BYPASS=true</code> in <code>.env.local</code> and
           restart dev to test a real send.
         </p>
         <div className="mt-4 grid sm:grid-cols-[1fr_auto] gap-3">
