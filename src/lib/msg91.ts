@@ -9,7 +9,7 @@ import "server-only";
 
 const AUTH_KEY = process.env.MSG91_AUTH_KEY;
 const TEMPLATE_ID = process.env.MSG91_TEMPLATE_ID;
-const SENDER_ID = process.env.MSG91_SENDER_ID || "PRAPIN";
+const SENDER_ID = process.env.MSG91_SENDER_ID || "prapin";
 const OTP_LENGTH = Number(process.env.MSG91_OTP_LENGTH || 6);
 const OTP_EXPIRY_MIN = Number(process.env.MSG91_OTP_EXPIRY_MIN || 5);
 const BASE = "https://control.msg91.com/api/v5/otp";
