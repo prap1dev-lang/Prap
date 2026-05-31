@@ -1,17 +1,21 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { PROJECTS, formatINR } from "@/lib/projects";
+import { formatINR } from "@/lib/projects";
+import { getProjectBySlug, listProjectSlugs } from "@/lib/projects-db";
 import { buildMetadata, SITE } from "@/lib/seo";
 import { BadgeCheck, MapPin, Coins, CheckCircle2, Calendar } from "lucide-react";
 
 type Params = { params: { slug: string } };
 
+export const revalidate = 60; // ISR — fresh every minute
+
 export async function generateStaticParams() {
-  return PROJECTS.map((p) => ({ slug: p.slug }));
+  const slugs = await listProjectSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: Params) {
-  const p = PROJECTS.find((x) => x.slug === params.slug);
+  const p = await getProjectBySlug(params.slug);
   if (!p) return buildMetadata({ title: "Project not found", noIndex: true });
   return buildMetadata({
     title: `${p.name} by ${p.builder} — ${p.sector}, ${p.city}`,
@@ -27,8 +31,8 @@ export async function generateMetadata({ params }: Params) {
   });
 }
 
-export default function ProjectPage({ params }: Params) {
-  const p = PROJECTS.find((x) => x.slug === params.slug);
+export default async function ProjectPage({ params }: Params) {
+  const p = await getProjectBySlug(params.slug);
   if (!p) return notFound();
 
   const productLd = {
@@ -36,7 +40,7 @@ export default function ProjectPage({ params }: Params) {
     "@type": "Residence",
     name: p.name,
     description: p.description,
-    image: [p.cover, ...p.gallery],
+    image: [p.cover, ...p.gallery].filter(Boolean),
     address: {
       "@type": "PostalAddress",
       addressLocality: p.sector,
@@ -65,10 +69,21 @@ export default function ProjectPage({ params }: Params) {
 
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-6">
-              <div className="card overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.cover} alt={`${p.name} cover`} className="w-full aspect-[16/9] object-cover" />
-              </div>
+              {p.cover && (
+                <div className="card overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.cover} alt={`${p.name} cover`} className="w-full aspect-[16/9] object-cover" />
+                </div>
+              )}
+
+              {p.gallery && p.gallery.length > 0 && (
+                <div className="grid grid-cols-3 gap-3">
+                  {p.gallery.slice(0, 6).map((g, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={i} src={g} alt={`${p.name} gallery ${i + 1}`} className="aspect-square object-cover rounded-xl bg-ink-100" loading="lazy" />
+                  ))}
+                </div>
+              )}
 
               <div>
                 <div className="flex flex-wrap gap-2">
@@ -92,32 +107,38 @@ export default function ProjectPage({ params }: Params) {
                 </div>
                 <div className="card p-4">
                   <p className="text-xs uppercase tracking-wider text-ink-500 flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> Possession</p>
-                  <p className="mt-1 text-xl font-bold text-ink-900">{p.possession}</p>
+                  <p className="mt-1 text-xl font-bold text-ink-900">{p.possession || "—"}</p>
                 </div>
               </div>
 
-              <div className="card p-6">
-                <h2 className="text-xl font-bold">About {p.name}</h2>
-                <p className="mt-3 text-ink-700 leading-relaxed">{p.description}</p>
-              </div>
-
-              <div className="card p-6">
-                <h2 className="text-xl font-bold">Highlights</h2>
-                <ul className="mt-4 grid sm:grid-cols-2 gap-2 text-ink-700">
-                  {p.highlights.map((h) => (
-                    <li key={h} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none" /> {h}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="card p-6">
-                <h2 className="text-xl font-bold">Amenities</h2>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {p.amenities.map((a) => (
-                    <span key={a} className="rounded-full bg-ink-100 px-3 py-1 text-sm text-ink-700">{a}</span>
-                  ))}
+              {p.description && (
+                <div className="card p-6">
+                  <h2 className="text-xl font-bold">About {p.name}</h2>
+                  <p className="mt-3 text-ink-700 leading-relaxed whitespace-pre-line">{p.description}</p>
                 </div>
-              </div>
+              )}
+
+              {p.highlights && p.highlights.length > 0 && (
+                <div className="card p-6">
+                  <h2 className="text-xl font-bold">Highlights</h2>
+                  <ul className="mt-4 grid sm:grid-cols-2 gap-2 text-ink-700">
+                    {p.highlights.map((h) => (
+                      <li key={h} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none" /> {h}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {p.amenities && p.amenities.length > 0 && (
+                <div className="card p-6">
+                  <h2 className="text-xl font-bold">Amenities</h2>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {p.amenities.map((a) => (
+                      <span key={a} className="rounded-full bg-ink-100 px-3 py-1 text-sm text-ink-700">{a}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <aside className="lg:col-span-4">
@@ -138,19 +159,13 @@ export default function ProjectPage({ params }: Params) {
                   <Link href="/auth/signup" className="btn-primary w-full">Book a site visit</Link>
                   <Link href={`/contact?project=${p.slug}`} className="btn-outline w-full">Talk to expert</Link>
                 </div>
-                <p className="mt-4 text-xs text-ink-500">
-                  By proceeding, you agree to PRAP's <Link href="/terms" className="underline">Terms</Link> & <Link href="/privacy" className="underline">Privacy</Link>.
-                </p>
               </div>
             </aside>
           </div>
         </div>
       </article>
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
     </>
   );
 }

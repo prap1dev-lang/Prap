@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { PROJECTS, formatINR } from "@/lib/projects";
+import { listProjects } from "@/lib/projects-db";
+import { formatINR } from "@/lib/projects";
 import { ArrowRight, BadgeCheck, MapPin } from "lucide-react";
 
-export default function ProjectsShowcase() {
-  const featured = PROJECTS.slice(0, 4);
+export default async function ProjectsShowcase() {
+  const featured = await listProjects({ limit: 4 });
   return (
     <section className="section bg-ink-50/50">
       <div className="container">
@@ -25,8 +26,15 @@ export default function ProjectsShowcase() {
               className="card overflow-hidden group hover:-translate-y-0.5 hover:shadow-lg transition"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.cover} alt={`${p.name} — ${p.city}`} className="h-full w-full object-cover group-hover:scale-105 transition duration-500" />
+                {p.cover && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.cover}
+                    alt={`${p.name} — ${p.city}`}
+                    className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
+                    loading="lazy"
+                  />
+                )}
                 <span className="absolute top-3 left-3 badge !bg-white/95 !text-ink-900">
                   <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA
                 </span>

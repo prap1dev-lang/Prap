@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --brand: 249 115 22;
-  --gold: 234 179 8;
-  --ink: 15 23 42;
+  --brand: 27 67 50;     /* Forest Green #1B4332 */
+  --sage:  163 177 138;  /* Sage Green   #A3B18A */
+  --beige: 245 245 220;  /* Beige        #F5F5DC */
+  --ink:   26 31 24;
 }
 
 html {
@@ -15,7 +16,7 @@ html {
 }
 
 body {
-  @apply bg-white text-ink-900 font-sans;
+  @apply bg-offwhite text-ink-900 font-sans;
 }
 
 @layer components {
@@ -60,8 +61,7 @@ body {
   }
 }
 
-/* selection */
 ::selection {
-  background: rgba(249, 115, 22, 0.2);
-  color: #7c2d12;
+  background: rgba(27, 67, 50, 0.18);
+  color: #1B4332;
 }

@@ -1,13 +1,24 @@
 import { buildMetadata } from "@/lib/seo";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata = buildMetadata({ title: "Bookings · Admin", path: "/admin/bookings", noIndex: true });
+export const dynamic = "force-dynamic";
 
-const rows = [
-  { id: "B-9001", project: "VVIP Namah",    broker: "U-0001", client: "U-0003", aadhaar4: "1234", visits: 1, status: "active" },
-  { id: "B-9002", project: "Irish Platinum", broker: "U-0001", client: "U-0010", aadhaar4: "5678", visits: 2, status: "active" },
-];
+export default async function BookingsAdmin() {
+  await requireAdmin();
+  const sb = supabaseAdmin();
+  const { data: rows } = await sb
+    .from("bookings")
+    .select(`
+      id, status, visits_completed, scheduled_at, created_at,
+      project:projects ( name, city ),
+      broker:users!bookings_broker_id_fkey ( name ),
+      client:users!bookings_client_id_fkey ( name, aadhaar_last4 )
+    `)
+    .order("created_at", { ascending: false })
+    .limit(100);
 
-export default function BookingsAdmin() {
   return (
     <div>
       <h1 className="text-3xl font-extrabold tracking-tight">Bookings</h1>
@@ -20,23 +31,26 @@ export default function BookingsAdmin() {
               <th className="px-5 py-3 text-left">Project</th>
               <th className="px-5 py-3 text-left">Broker</th>
               <th className="px-5 py-3 text-left">Client</th>
-              <th className="px-5 py-3 text-left">Aadhaar (last 4)</th>
+              <th className="px-5 py-3 text-left">Aadhaar last 4</th>
               <th className="px-5 py-3 text-left">Visits</th>
               <th className="px-5 py-3 text-left">Status</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {(rows ?? []).map((r: any) => (
               <tr key={r.id} className="border-t border-ink-100">
-                <td className="px-5 py-3 font-mono">{r.id}</td>
-                <td className="px-5 py-3">{r.project}</td>
-                <td className="px-5 py-3 font-mono">{r.broker}</td>
-                <td className="px-5 py-3 font-mono">{r.client}</td>
-                <td className="px-5 py-3 font-mono">XXXX-XXXX-{r.aadhaar4}</td>
-                <td className="px-5 py-3">{r.visits}</td>
+                <td className="px-5 py-3 font-mono text-xs">{r.id.slice(0, 8)}…</td>
+                <td className="px-5 py-3">{r.project?.name} <span className="text-ink-500">· {r.project?.city}</span></td>
+                <td className="px-5 py-3">{r.broker?.name || "—"}</td>
+                <td className="px-5 py-3">{r.client?.name}</td>
+                <td className="px-5 py-3 font-mono text-xs">XXXX-XXXX-{r.client?.aadhaar_last4}</td>
+                <td className="px-5 py-3">{r.visits_completed}</td>
                 <td className="px-5 py-3"><span className="badge">{r.status}</span></td>
               </tr>
             ))}
+            {(!rows || rows.length === 0) && (
+              <tr><td colSpan={7} className="px-5 py-10 text-center text-ink-500">No bookings yet.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

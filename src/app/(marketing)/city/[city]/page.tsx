@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { CITY_INFO, CITY_SLUGS, CitySlug, PROJECTS, formatINR } from "@/lib/projects";
+import { CITY_INFO, CITY_SLUGS, type CitySlug, formatINR } from "@/lib/projects";
+import { listProjects } from "@/lib/projects-db";
 import { buildMetadata } from "@/lib/seo";
 import { BadgeCheck, MapPin } from "lucide-react";
 
 type Params = { params: { city: string } };
+
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   return CITY_SLUGS.map((c) => ({ city: c }));
@@ -22,11 +25,11 @@ export async function generateMetadata({ params }: Params) {
   });
 }
 
-export default function CityPage({ params }: Params) {
+export default async function CityPage({ params }: Params) {
   const slug = params.city as CitySlug;
   const info = CITY_INFO[slug];
   if (!info) return notFound();
-  const list = PROJECTS.filter((p) => p.city.toLowerCase().replace(" ", "-") === slug);
+  const list = await listProjects({ city: info.name });
 
   return (
     <>
@@ -49,8 +52,10 @@ export default function CityPage({ params }: Params) {
           {list.map((p) => (
             <Link key={p.slug} href={`/projects/${p.slug}`} className="card overflow-hidden group hover:-translate-y-0.5 hover:shadow-lg transition">
               <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.cover} alt={`${p.name} in ${info.name}`} className="h-full w-full object-cover group-hover:scale-105 transition" />
+                {p.cover && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.cover} alt={`${p.name} in ${info.name}`} className="h-full w-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                )}
                 <span className="absolute top-3 left-3 badge !bg-white/95 !text-ink-900">
                   <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA
                 </span>
@@ -79,12 +84,6 @@ export default function CityPage({ params }: Params) {
               dedicated freight corridors, and a thriving IT/ITES ecosystem. PRAP curates
               only RERA-compliant projects from credible builders so your investment is safe.
             </p>
-            <ul className="mt-4 space-y-2 text-ink-700">
-              <li>• Excellent connectivity via expressways & metro</li>
-              <li>• Top-tier schools, hospitals & retail</li>
-              <li>• Strong rental yield + capital appreciation</li>
-              <li>• 100% transparent pricing on PRAP</li>
-            </ul>
           </article>
           <article className="card p-7">
             <h3 className="text-xl font-bold">PRAP rewards in {info.name}</h3>

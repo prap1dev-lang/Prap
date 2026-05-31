@@ -1,11 +1,24 @@
 import Link from "next/link";
 import { Coins, ArrowUpRight, Calendar, TrendingUp, Sparkles, Copy } from "lucide-react";
 import { buildMetadata } from "@/lib/seo";
+import { getSessionUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import AadhaarOtpCard from "@/components/kyc/AadhaarOtpCard";
 
 export const metadata = buildMetadata({ title: "Dashboard", path: "/dashboard", noIndex: true });
+export const dynamic = "force-dynamic";
 
-export default function Dashboard({ searchParams }: { searchParams?: { role?: string; welcome?: string } }) {
-  const role = (searchParams?.role || "referrer") as "broker" | "corporate" | "referrer";
+export default async function Dashboard({ searchParams }: { searchParams?: { role?: string; welcome?: string } }) {
+  const me = await getSessionUser();
+  const { data: row } = me
+    ? await supabaseAdmin()
+        .from("users")
+        .select("pan_verified, aadhaar_verified, rera_verified")
+        .eq("id", me.authId)
+        .maybeSingle()
+    : { data: null as any };
+
+  const role = (me?.role ?? (searchParams?.role as any) ?? "referrer") as "broker" | "corporate" | "referrer";
   const welcome = searchParams?.welcome === "1";
   const refCode = "PRAP-AB12CD"; // placeholder
 
@@ -79,6 +92,10 @@ export default function Dashboard({ searchParams }: { searchParams?: { role?: st
             Your UP-RERA registration is queued for verification. You'll be able to book client visits within 1 business day.
           </p>
         </section>
+      )}
+
+      {row && !row.aadhaar_verified && (
+        <AadhaarOtpCard initiallyVerified={false} />
       )}
 
       <section className="grid lg:grid-cols-2 gap-6">

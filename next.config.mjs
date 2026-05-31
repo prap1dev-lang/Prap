@@ -7,6 +7,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "res.cloudinary.com" },
+      // Supabase Storage public bucket — wildcard for any project ref
+      { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
   async headers() {

@@ -5,7 +5,9 @@
       "Bash(cd /d \"d:\\\\websitem\\\\Prap\")",
       "Bash(dir /S /B src)",
       "Bash(findstr /V \"node_modules\")",
-      "PowerShell(Get-ChildItem -Path \"d:\\\\websitem\\\\Prap\\\\src\" -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"d:\\\\websitem\\\\Prap\\\\\", \"\"\\) })"
+      "PowerShell(Get-ChildItem -Path \"d:\\\\websitem\\\\Prap\\\\src\" -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"d:\\\\websitem\\\\Prap\\\\\", \"\"\\) })",
+      "PowerShell(if \\(-not \\(Test-Path \".env.local\"\\)\\) { Copy-Item \".env.local.example\" \".env.local\" }; \"exists: $\\(\\(Test-Path '.env.local'\\)\\)\")",
+      "Bash(grep -E \"\\(Compiled|Error|Failed|admin/projects|projects/|/$\\)\")"
     ]
   }
 }

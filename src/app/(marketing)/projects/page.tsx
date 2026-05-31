@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PROJECTS, formatINR } from "@/lib/projects";
+import { formatINR } from "@/lib/projects";
+import { listProjects } from "@/lib/projects-db";
 import { buildMetadata } from "@/lib/seo";
 import { BadgeCheck, MapPin, Search } from "lucide-react";
 
@@ -11,24 +12,20 @@ export const metadata = buildMetadata({
   keywords: ["all projects in noida", "rera projects greater noida", "buy 3 bhk noida"],
 });
 
-export default function ProjectsPage({
+export const dynamic = "force-dynamic";
+
+export default async function ProjectsPage({
   searchParams,
-}: { searchParams?: { q?: string; city?: string } }) {
-  const q = (searchParams?.q || "").toLowerCase();
-  const city = searchParams?.city || "";
-  let list = PROJECTS;
-  if (q) list = list.filter((p) =>
-    [p.name, p.builder, p.sector, p.city, p.configuration.join(" ")].join(" ").toLowerCase().includes(q),
-  );
-  if (city) list = list.filter((p) => p.city === city);
+}: {
+  searchParams?: { q?: string; city?: string };
+}) {
+  const list = await listProjects({ q: searchParams?.q, city: searchParams?.city });
 
   return (
     <>
       <section className="bg-ink-950 text-white">
         <div className="container py-14">
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">
-            All projects on PRAP
-          </h1>
+          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">All projects on PRAP</h1>
           <p className="mt-3 text-ink-200 max-w-2xl">
             Hand-curated, RERA-verified residential & commercial projects in Noida,
             Greater Noida and across India. Every visit earns you real money.
@@ -38,12 +35,12 @@ export default function ProjectsPage({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-500" />
               <input
                 name="q"
-                defaultValue={q}
+                defaultValue={searchParams?.q || ""}
                 placeholder="Search projects, builders or sectors…"
                 className="input !text-ink-900 !pl-10"
               />
             </div>
-            <select name="city" defaultValue={city} className="input md:col-span-3 !text-ink-900">
+            <select name="city" defaultValue={searchParams?.city || ""} className="input md:col-span-3 !text-ink-900">
               <option value="">All cities</option>
               <option>Noida</option>
               <option>Greater Noida</option>
@@ -58,10 +55,16 @@ export default function ProjectsPage({
         <p className="text-sm text-ink-500 mb-4">{list.length} project{list.length === 1 ? "" : "s"} found</p>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {list.map((p) => (
-            <Link key={p.slug} href={`/projects/${p.slug}`} className="card overflow-hidden group hover:-translate-y-0.5 hover:shadow-lg transition">
+            <Link
+              key={p.slug}
+              href={`/projects/${p.slug}`}
+              className="card overflow-hidden group hover:-translate-y-0.5 hover:shadow-lg transition"
+            >
               <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.cover} alt={`${p.name} — ${p.builder} in ${p.city}`} className="h-full w-full object-cover group-hover:scale-105 transition" />
+                {p.cover && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.cover} alt={`${p.name} — ${p.builder} in ${p.city}`} className="h-full w-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                )}
                 <span className="absolute top-3 left-3 badge !bg-white/95 !text-ink-900">
                   <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA
                 </span>
@@ -80,6 +83,9 @@ export default function ProjectsPage({
               </div>
             </Link>
           ))}
+          {list.length === 0 && (
+            <p className="text-ink-500 col-span-full text-center py-10">No projects match your filters.</p>
+          )}
         </div>
       </section>
     </>

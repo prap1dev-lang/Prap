@@ -1,13 +1,21 @@
 import { buildMetadata } from "@/lib/seo";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata = buildMetadata({ title: "Payments · Admin", path: "/admin/payments", noIndex: true });
+export const dynamic = "force-dynamic";
 
-const rows = [
-  { id: "P-2001", booking: "B-9001", user: "U-0003", amount: 5500000, milestone: "50%", status: "captured", at: "2026-05-15" },
-  { id: "P-2002", booking: "B-9001", user: "U-0003", amount: 2750000, milestone: "25%", status: "pending",   at: "—" },
-];
+export default async function PaymentsPage() {
+  await requireAdmin();
+  const sb = supabaseAdmin();
+  const { data: rows } = await sb
+    .from("payments")
+    .select("id, booking_id, milestone_index, gross_amount_inr, coin_discount_inr, net_amount_inr, status, captured_at, created_at")
+    .order("created_at", { ascending: false })
+    .limit(100);
 
-export default function PaymentsPage() {
+  const milestoneLabel = (i: number) => `${[50, 25, 25][i]}%`;
+
   return (
     <div>
       <h1 className="text-3xl font-extrabold tracking-tight">Payments</h1>
@@ -18,31 +26,30 @@ export default function PaymentsPage() {
             <tr>
               <th className="px-5 py-3 text-left">Ref</th>
               <th className="px-5 py-3 text-left">Booking</th>
-              <th className="px-5 py-3 text-left">User</th>
-              <th className="px-5 py-3 text-right">Amount</th>
+              <th className="px-5 py-3 text-right">Gross</th>
+              <th className="px-5 py-3 text-right">Coin discount</th>
+              <th className="px-5 py-3 text-right">Net</th>
               <th className="px-5 py-3 text-left">Milestone</th>
               <th className="px-5 py-3 text-left">Status</th>
               <th className="px-5 py-3 text-left">Captured</th>
-              <th className="px-5 py-3 text-right">Receipt</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {(rows ?? []).map((r) => (
               <tr key={r.id} className="border-t border-ink-100">
-                <td className="px-5 py-3 font-mono">{r.id}</td>
-                <td className="px-5 py-3 font-mono">{r.booking}</td>
-                <td className="px-5 py-3 font-mono">{r.user}</td>
-                <td className="px-5 py-3 text-right">₹{r.amount.toLocaleString("en-IN")}</td>
-                <td className="px-5 py-3">{r.milestone}</td>
-                <td className="px-5 py-3">
-                  <span className={`badge ${r.status === "captured" ? "!bg-emerald-50 !text-emerald-700" : "!bg-amber-50 !text-amber-700"}`}>{r.status}</span>
-                </td>
-                <td className="px-5 py-3 text-ink-500">{r.at}</td>
-                <td className="px-5 py-3 text-right">
-                  <button className="btn-outline !py-1.5 !px-3 text-xs">Download</button>
-                </td>
+                <td className="px-5 py-3 font-mono text-xs">{r.id.slice(0, 8)}…</td>
+                <td className="px-5 py-3 font-mono text-xs">{r.booking_id.slice(0, 8)}…</td>
+                <td className="px-5 py-3 text-right">₹{Number(r.gross_amount_inr).toLocaleString("en-IN")}</td>
+                <td className="px-5 py-3 text-right">−₹{Number(r.coin_discount_inr).toLocaleString("en-IN")}</td>
+                <td className="px-5 py-3 text-right font-semibold">₹{Number(r.net_amount_inr).toLocaleString("en-IN")}</td>
+                <td className="px-5 py-3">{milestoneLabel(r.milestone_index)}</td>
+                <td className="px-5 py-3"><span className={`badge ${r.status === "captured" ? "!bg-emerald-50 !text-emerald-700" : r.status === "failed" ? "!bg-rose-50 !text-rose-700" : "!bg-amber-50 !text-amber-700"}`}>{r.status}</span></td>
+                <td className="px-5 py-3 text-ink-500">{r.captured_at ? new Date(r.captured_at).toLocaleString("en-IN") : "—"}</td>
               </tr>
             ))}
+            {(!rows || rows.length === 0) && (
+              <tr><td colSpan={8} className="px-5 py-10 text-center text-ink-500">No payments yet.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -5,7 +5,7 @@ import { buildMetadata, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 export const metadata: Metadata = buildMetadata();
 
 export const viewport: Viewport = {
-  themeColor: "#f97316",
+  themeColor: "#1B4332",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
