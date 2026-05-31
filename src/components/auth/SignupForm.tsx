@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Briefcase, Building2, UserRound, ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
+import { useMsg91Widget } from "@/components/auth/useMsg91Widget";
 
 type Role = "broker" | "corporate" | "referrer";
 
@@ -18,6 +19,7 @@ function normalizePhone(p: string) {
 }
 
 export default function SignupForm({ initialRole }: { initialRole?: Role }) {
+  const widget = useMsg91Widget();
   const [role, setRole] = useState<Role>(
     initialRole && (["broker", "corporate", "referrer"] as Role[]).includes(initialRole)
       ? initialRole
@@ -42,14 +44,11 @@ export default function SignupForm({ initialRole }: { initialRole?: Role }) {
     setError(null);
     setSubmitting(true);
     try {
+      if (widget.status !== "ready") {
+        throw new Error(widget.error || "OTP service is still loading. Try again in a second.");
+      }
       const phone = normalizePhone(form.phone);
-      const res = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
-      const body = await res.json();
-      if (!res.ok || !body.ok) throw new Error(body.error || "Could not send OTP");
+      await widget.send(phone);
       setStep("otp");
     } catch (e: any) {
       setError(e?.message || "Failed to send OTP");
@@ -64,31 +63,30 @@ export default function SignupForm({ initialRole }: { initialRole?: Role }) {
     setSubmitting(true);
     try {
       const phone = normalizePhone(form.phone);
+      const accessToken = await widget.verify(otp);
+
       // Stash profile so /auth/complete can finalize the public.users row.
       sessionStorage.setItem(
         "prap-signup-profile",
-        JSON.stringify({
-          role,
-          profile: { ...form, phone },
-        }),
+        JSON.stringify({ role, profile: { ...form, phone } }),
       );
 
       const origin = window.location.origin;
-      const res = await fetch("/api/auth/otp/verify", {
+      const res = await fetch("/api/auth/widget/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone,
-          otp,
+          accessToken,
           mode: "signup",
           redirectTo: `${origin}/auth/complete`,
         }),
       });
       const body = await res.json();
       if (!res.ok || !body.ok || !body.actionLink) {
-        throw new Error(body.error || "OTP verification failed");
+        throw new Error(body.error || "Phone verification failed");
       }
-      // Follow the magic link — Supabase sets the cookie, redirects to /auth/complete.
+      // Follow the magic link — Supabase sets cookies, redirects to /auth/complete.
       window.location.href = body.actionLink;
     } catch (e: any) {
       setError(e?.message || "OTP verification failed");
@@ -124,9 +122,21 @@ export default function SignupForm({ initialRole }: { initialRole?: Role }) {
         <button className="btn-primary w-full" disabled={submitting || otp.length !== 6}>
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Verify & continue <ArrowRight className="h-4 w-4" /></>}
         </button>
-        <button type="button" className="btn-ghost w-full" onClick={() => setStep("form")}>
-          Edit details
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn-ghost flex-1"
+            onClick={async () => {
+              setError(null);
+              try { await widget.resend(false); } catch (e: any) { setError(e?.message || "Resend failed"); }
+            }}
+          >
+            Resend SMS
+          </button>
+          <button type="button" className="btn-ghost flex-1" onClick={() => setStep("form")}>
+            Edit details
+          </button>
+        </div>
       </form>
     );
   }
@@ -218,9 +228,15 @@ export default function SignupForm({ initialRole }: { initialRole?: Role }) {
         </span>
       </label>
 
+      {widget.status === "loading" && (
+        <p className="text-xs text-ink-500 flex items-center gap-2">
+          <Loader2 className="h-3 w-3 animate-spin" /> Loading verification service…
+        </p>
+      )}
+      {widget.status === "error" && <ErrorBox msg={widget.error || "OTP service unavailable"} />}
       {error && <ErrorBox msg={error} />}
 
-      <button className="btn-primary w-full" disabled={submitting}>
+      <button className="btn-primary w-full" disabled={submitting || widget.status !== "ready"}>
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Send OTP <ArrowRight className="h-4 w-4" /></>}
       </button>
     </form>
