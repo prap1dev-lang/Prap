@@ -11,7 +11,9 @@
       "Bash(New-Item -ItemType Directory -Force \"d:\\\\websitem\\\\Prap\\\\src\\\\app\\\\api\\\\auth\\\\firebase\\\\exchange\")",
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\websitem\\\\Prap\\\\src\\\\app\\\\api\\\\auth\\\\firebase\\\\exchange\")",
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\websitem\\\\Prap\\\\src\\\\app\\\\api\\\\admin\\\\upload\")",
-      "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\websitem\\\\Prap\\\\src\\\\app\\\\api\\\\admin\\\\projects\")"
+      "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\websitem\\\\Prap\\\\src\\\\app\\\\api\\\\admin\\\\projects\")",
+      "Bash(git push *)",
+      "Bash(git config *)"
     ]
   }
 }
