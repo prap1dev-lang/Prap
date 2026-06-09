@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid phone" }, { status: 400 });
   }
 
-  // TODO: integrate Firebase Auth phone OTP / MSG91 / Twilio
+  // TODO: integrate Firebase Auth phone OTP / Twilio
   // - Throttle: max 3 OTPs/min/phone, 10/day
   // - Store OTP hash (bcrypt) + expiry (5 min) in supabase: otp_requests
   // - Send via provider, return masked phone

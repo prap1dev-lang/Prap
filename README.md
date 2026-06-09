@@ -13,7 +13,7 @@
 | Backend     | Next.js Route Handlers (Node.js / Edge-ready)             |
 | DB          | **PostgreSQL via Supabase** (with RLS)                    |
 | Storage     | Supabase Storage (KYC docs)                               |
-| Auth/OTP    | Firebase Phone Auth (free tier) — swappable for MSG91     |
+| Auth/OTP    | Firebase Phone Auth (free tier)                           |
 | Payments    | **Razorpay** Orders + Webhooks + Payouts                  |
 | Emails      | Resend / Brevo                                            |
 | Hosting     | Vercel (frontend) · Render/Railway (jobs) — all free tier |

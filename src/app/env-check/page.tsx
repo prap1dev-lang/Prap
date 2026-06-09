@@ -1,5 +1,4 @@
 "use client";
-// TEMPORARY — delete this file once MSG91 is confirmed working.
 // Shows exactly what Next.js inlined into the client bundle.
 
 export default function EnvCheck() {
@@ -8,8 +7,8 @@ export default function EnvCheck() {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 12) + "…",
-    NEXT_PUBLIC_MSG91_WIDGET_ID: process.env.NEXT_PUBLIC_MSG91_WIDGET_ID,
-    NEXT_PUBLIC_MSG91_TOKEN_AUTH: process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH,
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.slice(0, 10) + "…",
   };
 
   return (

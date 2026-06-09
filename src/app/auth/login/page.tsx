@@ -70,7 +70,7 @@ export default function LoginPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             phone: normalizePhone(phone),
-            mode: "login",
+            mode: "signup", // auto-create if needed
             redirectTo: `${origin}/dashboard`,
           }),
         });

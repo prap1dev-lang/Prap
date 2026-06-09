@@ -20,59 +20,66 @@ export async function POST(req: Request) {
     );
   }
 
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
-  }
-
-  const { phone, redirectTo, mode } = parsed.data;
-
-  const digits = phone.replace(/^\+/, "");
-  const syntheticEmail = `phone-${digits}@users.prap.in`;
-  const admin = supabaseAdmin();
-
-  if (mode === "signup") {
-    await admin.auth.admin
-      .createUser({
-        email: syntheticEmail,
-        phone,
-        email_confirm: true,
-        phone_confirm: true,
-        user_metadata: { source: "test_login", phone },
-      })
-      .catch(() => { /* already exists — fine */ });
-  } else {
-    // login: ensure user exists
-    const { data: pub } = await admin
-      .from("users")
-      .select("id")
-      .eq("phone", phone)
-      .maybeSingle();
-
-    if (!pub) {
-      const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 });
-      const exists = list?.users?.some((u) => u.email === syntheticEmail);
-      if (!exists) {
-        return NextResponse.json(
-          { ok: false, error: "No account found for this phone. Please sign up first." },
-          { status: 404 }
-        );
-      }
+  try {
+    const parsed = Body.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) {
+      console.error("[test-login] Parse error:", parsed.error.flatten());
+      return NextResponse.json(
+        { ok: false, error: "Invalid phone format. Use +919876543210 format." },
+        { status: 400 }
+      );
     }
-  }
 
-  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email: syntheticEmail,
-    options: redirectTo ? { redirectTo } : undefined,
-  });
+    const { phone, redirectTo, mode } = parsed.data;
 
-  if (linkErr || !linkData?.properties?.action_link) {
+    const digits = phone.replace(/^\+/, "");
+    const syntheticEmail = `phone-${digits}@users.prap.in`;
+    const admin = supabaseAdmin();
+
+    // For test login in development: auto-create user if doesn't exist
+    const createResult = await admin.auth.admin.createUser({
+      email: syntheticEmail,
+      phone,
+      email_confirm: true,
+      phone_confirm: true,
+      user_metadata: { source: "test_login", phone },
+    }).catch((err) => {
+      // Already exists is fine, but log other errors
+      if (!err?.message?.includes("already exists")) {
+        console.error("[test-login] Create user error:", err);
+      }
+      return { data: null, error: null };
+    });
+
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email: syntheticEmail,
+      options: redirectTo ? { redirectTo } : undefined,
+    });
+
+    if (linkErr) {
+      console.error("[test-login] Generate link error:", linkErr);
+      return NextResponse.json(
+        { ok: false, error: linkErr?.message || "Could not create session" },
+        { status: 500 }
+      );
+    }
+
+    if (!linkData?.properties?.action_link) {
+      console.error("[test-login] No action link in response:", linkData);
+      return NextResponse.json(
+        { ok: false, error: "Could not generate login link" },
+        { status: 500 }
+      );
+    }
+
+    console.log("[test-login] Success for", phone);
+    return NextResponse.json({ ok: true, actionLink: linkData.properties.action_link, phone });
+  } catch (e: any) {
+    console.error("[test-login] Unexpected error:", e);
     return NextResponse.json(
-      { ok: false, error: linkErr?.message || "Could not create session" },
+      { ok: false, error: e?.message || "Internal server error" },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ ok: true, actionLink: linkData.properties.action_link, phone });
 }
