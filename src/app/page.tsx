@@ -1,4 +1,3 @@
-import AuthHashRedirect from "@/components/auth/AuthHashRedirect";
 import Navbar from "@/components/site/Navbar";
 import Hero from "@/components/site/Hero";
 import TrustBar from "@/components/site/TrustBar";
@@ -21,7 +20,6 @@ export const metadata = buildMetadata({
 export default function HomePage() {
   return (
     <>
-      <AuthHashRedirect />
       <Navbar />
       <main>
         <Hero />

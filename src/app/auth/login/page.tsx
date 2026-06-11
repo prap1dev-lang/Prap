@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase-client";
+import { supabaseBrowser } from "@/lib/supabase";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -66,21 +67,22 @@ export default function LoginPage() {
       const credential = await confirmationRef.current.confirm(otp);
       const idToken = await credential.user.getIdToken();
 
-      const origin = window.location.origin;
       const res = await fetch("/api/auth/firebase/exchange", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idToken,
-          mode: "login",
-          redirectTo: `${origin}/dashboard`,
-        }),
+        body: JSON.stringify({ idToken, mode: "login" }),
       });
       const body = await res.json();
-      if (!res.ok || !body.ok || !body.actionLink) {
-        throw new Error(body.error || "Sign in failed");
+      if (!res.ok || !body.ok || !body.session) {
+        const msg = typeof body.error === "string" ? body.error : "Sign in failed";
+        throw new Error(msg);
       }
-      window.location.href = body.actionLink;
+
+      // Set the Supabase session directly — no magic-link redirect.
+      const { error: sessErr } = await supabaseBrowser().auth.setSession(body.session);
+      if (sessErr) throw sessErr;
+
+      window.location.href = "/dashboard";
     } catch (e: any) {
       setError(e?.message || "Invalid OTP");
       setLoading(false);

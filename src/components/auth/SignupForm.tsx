@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Briefcase, Building2, UserRound, ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase-client";
+import { supabaseBrowser } from "@/lib/supabase";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -87,26 +88,27 @@ export default function SignupForm({ initialRole }: { initialRole?: Role }) {
       const idToken = await credential.user.getIdToken();
 
       const phone = normalizePhone(form.phone);
-      sessionStorage.setItem(
-        "prap-signup-profile",
-        JSON.stringify({ role, profile: { ...form, phone } }),
-      );
-
-      const origin = window.location.origin;
       const res = await fetch("/api/auth/firebase/exchange", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           idToken,
           mode: "signup",
-          redirectTo: `${origin}/auth/complete`,
+          role,
+          profile: { ...form, phone },
         }),
       });
       const body = await res.json();
-      if (!res.ok || !body.ok || !body.actionLink) {
-        throw new Error(body.error || "OTP verification failed");
+      if (!res.ok || !body.ok || !body.session) {
+        const msg = typeof body.error === "string" ? body.error : "OTP verification failed";
+        throw new Error(msg);
       }
-      window.location.href = body.actionLink;
+
+      // Set the Supabase session directly — no magic-link redirect.
+      const { error: sessErr } = await supabaseBrowser().auth.setSession(body.session);
+      if (sessErr) throw sessErr;
+
+      window.location.href = `/dashboard?role=${role}&welcome=1`;
     } catch (e: any) {
       setError(e?.message || "OTP verification failed");
       setSubmitting(false);
