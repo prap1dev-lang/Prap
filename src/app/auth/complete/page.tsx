@@ -28,7 +28,13 @@ export default function CompletePage() {
         const supabase = supabaseBrowser();
 
         // ---- Step 1: turn the URL into a session ----
+        // With detectSessionInUrl:true the client consumes #access_token
+        // asynchronously, so poll getSession briefly before falling back.
         let session = (await supabase.auth.getSession()).data.session;
+        for (let i = 0; !session && i < 10; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          session = (await supabase.auth.getSession()).data.session;
+        }
 
         if (!session) {
           // Try the implicit-flow hash

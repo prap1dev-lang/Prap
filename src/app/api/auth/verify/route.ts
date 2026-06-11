@@ -69,10 +69,18 @@ export async function POST(req: Request) {
   });
 
   if (insertUserErr) {
+    console.error("[verify] users insert failed:", insertUserErr);
     // 23505 = unique violation (phone/email already used)
     const isDup = (insertUserErr as any).code === "23505";
+    const e = insertUserErr as any;
     return NextResponse.json(
-      { ok: false, error: isDup ? "An account already exists for this phone or email." : insertUserErr.message },
+      {
+        ok: false,
+        error: isDup
+          ? "An account already exists for this phone or email."
+          : `${e.message}${e.details ? ` — ${e.details}` : ""}${e.hint ? ` (${e.hint})` : ""}`,
+        code: e.code,
+      },
       { status: isDup ? 409 : 400 },
     );
   }
@@ -86,9 +94,14 @@ export async function POST(req: Request) {
   });
 
   if (ledgerErr) {
+    console.error("[verify] coin_ledger insert failed:", ledgerErr);
     // best-effort cleanup so user isn't left half-created
     await admin.from("users").delete().eq("id", user.id);
-    return NextResponse.json({ ok: false, error: ledgerErr.message }, { status: 500 });
+    const e = ledgerErr as any;
+    return NextResponse.json(
+      { ok: false, error: `${e.message}${e.details ? ` — ${e.details}` : ""}`, code: e.code },
+      { status: 500 },
+    );
   }
 
   if (role === "corporate") {
