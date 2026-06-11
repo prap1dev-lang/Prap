@@ -311,4 +311,17 @@ create policy bookings_party_read on bookings for select
   using (broker_id = auth.uid() or client_id = auth.uid()
          or exists (select 1 from users u where u.id = auth.uid() and u.role = 'admin'));
 
+-- =====================================================================
+--  6. PROJECTS — extended metadata column
+--      The admin project-create form writes ~60 extra spec fields into a
+--      single JSONB column. Without this, inserts fail with:
+--      "Could not find the 'meta' column of 'projects' in the schema cache".
+--      After running, reload PostgREST's cache: Dashboard → Settings → API
+--      → "Reload schema cache" (or run: notify pgrst, 'reload schema';).
+-- =====================================================================
+alter table projects
+  add column if not exists meta jsonb not null default '{}'::jsonb;
+
+notify pgrst, 'reload schema';
+
 -- Done. You can now run the app.

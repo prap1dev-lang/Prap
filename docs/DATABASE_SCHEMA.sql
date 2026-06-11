@@ -64,6 +64,7 @@ create table projects (
   description   text,
   status        project_status not null default 'under_construction',
   is_listed     boolean not null default true,
+  meta          jsonb not null default '{}'::jsonb,   -- extended spec fields from admin form
   created_at    timestamptz not null default now()
 );
 create index projects_city_idx on projects(city);

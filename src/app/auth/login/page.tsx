@@ -62,26 +62,6 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      // Allow test OTP 123456 for any phone number during development
-      if (otp === "123456") {
-        const origin = window.location.origin;
-        const res = await fetch("/api/auth/test-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            phone: normalizePhone(phone),
-            mode: "signup", // auto-create if needed
-            redirectTo: `${origin}/dashboard`,
-          }),
-        });
-        const body = await res.json();
-        if (!res.ok || !body.ok || !body.actionLink) {
-          throw new Error(body.error || "Sign in failed");
-        }
-        window.location.href = body.actionLink;
-        return;
-      }
-
       if (!confirmationRef.current) throw new Error("Session expired. Please resend OTP.");
       const credential = await confirmationRef.current.confirm(otp);
       const idToken = await credential.user.getIdToken();
