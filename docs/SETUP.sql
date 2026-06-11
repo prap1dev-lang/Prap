@@ -322,6 +322,143 @@ create policy bookings_party_read on bookings for select
 alter table projects
   add column if not exists meta jsonb not null default '{}'::jsonb;
 
+-- =====================================================================
+--  7. REFERRAL & VISIT CREDITS — atomic, idempotent, abuse-resistant
+-- =====================================================================
+
+-- 7a. Track when a referral code was last rotated / who owns it (1 active code
+--     per corporate). corporate_id already references users(id).
+alter table referral_codes
+  add column if not exists rotated_at timestamptz;
+
+-- Only one ACTIVE code per corporate at a time (history preserved as inactive).
+create unique index if not exists referral_codes_one_active_per_corp
+  on referral_codes(corporate_id) where (active);
+
+-- 7b. coin_ledger idempotency guard.
+--     A given (user, source, ref_id) can be credited at most once, so retries /
+--     double-submits / replays can never double-pay. ref_id = booking id for
+--     visit credits; partial index ignores rows without a ref_id (e.g. onboarding).
+create unique index if not exists coin_ledger_unique_ref
+  on coin_ledger(user_id, source, ref_id) where (ref_id is not null);
+
+-- 7c. visit_log: one authoritative row per (booking, visit_no). The unique
+--     constraint is the hard idempotency boundary for the whole credit op.
+create table if not exists visit_log (
+  id            uuid primary key default gen_random_uuid(),
+  booking_id    uuid not null references bookings(id) on delete cascade,
+  visit_no      smallint not null check (visit_no between 1 and 10),
+  attendees     text[] not null default '{}',
+  confirmed_by  uuid references users(id),          -- admin who confirmed
+  referrer_id   uuid references users(id),
+  corporate_id  uuid references users(id),
+  referrer_coins  bigint not null default 0,
+  corporate_coins bigint not null default 0,
+  created_at    timestamptz not null default now(),
+  unique (booking_id, visit_no)
+);
+create index if not exists visit_log_booking_idx on visit_log(booking_id);
+
+-- 7d. Atomic credit function. SECURITY DEFINER so it runs with table-owner
+--     rights regardless of caller RLS; we still gate the HTTP route to admins.
+--     Returns the credits applied. Raises 'already_credited' on replay.
+create or replace function credit_visit(
+  p_booking_id uuid,
+  p_visit_no   smallint,
+  p_attendees  text[],
+  p_admin_id   uuid
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_referrer_id   uuid;
+  v_corporate_id  uuid;
+  v_ref_coins     bigint := 0;
+  v_corp_coins    bigint := 0;
+  v_ref_bal       bigint;
+  v_corp_bal      bigint;
+  v_self          boolean;
+begin
+  if array_length(p_attendees, 1) is null or array_length(p_attendees, 1) < 2 then
+    raise exception 'min_attendees' using errcode = 'check_violation';
+  end if;
+
+  -- Resolve the referrer (booking client) and the corporate that referred them.
+  select b.client_id, u.referred_by_corporate
+    into v_referrer_id, v_corporate_id
+  from bookings b
+  join users u on u.id = b.client_id
+  where b.id = p_booking_id;
+
+  if v_referrer_id is null then
+    raise exception 'booking_not_found' using errcode = 'no_data_found';
+  end if;
+
+  -- Self-referral guard: a corporate must never be its own referrer.
+  v_self := (v_corporate_id is not null and v_corporate_id = v_referrer_id);
+  if v_self then
+    v_corporate_id := null;  -- silently drop the corporate cut, still credit referrer
+  end if;
+
+  -- Coin rules (mirror lib/coins.ts): visits 1 & 2 pay; 3+ pay nothing.
+  if p_visit_no in (1, 2) then
+    v_ref_coins  := 10000;
+    v_corp_coins := case when v_corporate_id is not null then 5000 else 0 end;
+  end if;
+
+  -- Idempotency boundary: this insert fails on replay (unique booking,visit_no).
+  insert into visit_log(booking_id, visit_no, attendees, confirmed_by,
+                        referrer_id, corporate_id, referrer_coins, corporate_coins)
+  values (p_booking_id, p_visit_no, p_attendees, p_admin_id,
+          v_referrer_id, v_corporate_id, v_ref_coins, v_corp_coins);
+
+  -- Credit referrer.
+  if v_ref_coins > 0 then
+    select coalesce(balance, 0) into v_ref_bal from wallets where user_id = v_referrer_id;
+    insert into coin_ledger(user_id, source, delta, balance_after, ref_table, ref_id, notes)
+    values (v_referrer_id,
+            ('visit_' || p_visit_no)::coin_source,
+            v_ref_coins, coalesce(v_ref_bal,0) + v_ref_coins,
+            'bookings', p_booking_id,
+            'Site visit ' || p_visit_no || ' bonus');
+  end if;
+
+  -- Credit corporate.
+  if v_corp_coins > 0 then
+    select coalesce(balance, 0) into v_corp_bal from wallets where user_id = v_corporate_id;
+    insert into coin_ledger(user_id, source, delta, balance_after, ref_table, ref_id, notes)
+    values (v_corporate_id,
+            ('visit_' || p_visit_no || '_corporate')::coin_source,
+            v_corp_coins, coalesce(v_corp_bal,0) + v_corp_coins,
+            'bookings', p_booking_id,
+            'Referral visit ' || p_visit_no || ' bonus');
+  end if;
+
+  update bookings
+    set visits_completed = greatest(visits_completed, p_visit_no),
+        status = case when status = 'scheduled' then 'visited' else status end,
+        updated_at = now()
+  where id = p_booking_id;
+
+  return jsonb_build_object(
+    'booking_id', p_booking_id,
+    'visit_no', p_visit_no,
+    'referrer_id', v_referrer_id,
+    'referrer_coins', v_ref_coins,
+    'corporate_id', v_corporate_id,
+    'corporate_coins', v_corp_coins,
+    'self_referral_blocked', v_self
+  );
+exception
+  when unique_violation then
+    raise exception 'already_credited' using errcode = 'unique_violation';
+end;
+$$;
+
+revoke all on function credit_visit(uuid, smallint, text[], uuid) from public, anon, authenticated;
+
 notify pgrst, 'reload schema';
 
 -- Done. You can now run the app.

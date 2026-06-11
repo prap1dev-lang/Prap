@@ -1,17 +1,20 @@
 import Link from "next/link";
-import { Coins, ArrowUpRight, Calendar, TrendingUp, Sparkles, Copy } from "lucide-react";
+import { Coins, ArrowUpRight, Calendar, TrendingUp, Sparkles } from "lucide-react";
 import { buildMetadata } from "@/lib/seo";
 import { getSessionUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import AadhaarOtpCard from "@/components/kyc/AadhaarOtpCard";
+import ReferralCodeCard from "@/components/dashboard/ReferralCodeCard";
 
 export const metadata = buildMetadata({ title: "Dashboard", path: "/dashboard", noIndex: true });
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard({ searchParams }: { searchParams?: { role?: string; welcome?: string } }) {
   const me = await getSessionUser();
+  const admin = supabaseAdmin();
+
   const { data: row } = me
-    ? await supabaseAdmin()
+    ? await admin
         .from("users")
         .select("pan_verified, aadhaar_verified, rera_verified")
         .eq("id", me.authId)
@@ -20,7 +23,29 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
 
   const role = (me?.role ?? (searchParams?.role as any) ?? "referrer") as "broker" | "corporate" | "referrer";
   const welcome = searchParams?.welcome === "1";
-  const refCode = "PRAP-AB12CD"; // placeholder
+
+  // Real wallet + corporate referral code.
+  const { data: wallet } = me
+    ? await admin
+        .from("wallets")
+        .select("balance, lifetime_earned, lifetime_redeemed")
+        .eq("user_id", me.authId)
+        .maybeSingle()
+    : { data: null as any };
+
+  let refCode: string | null = null;
+  if (me && role === "corporate") {
+    const { data: rc } = await admin
+      .from("referral_codes")
+      .select("code")
+      .eq("corporate_id", me.authId)
+      .eq("active", true)
+      .maybeSingle();
+    refCode = rc?.code ?? null;
+  }
+
+  const balance = Number(wallet?.balance ?? 0);
+  const lifetimeRedeemed = Number(wallet?.lifetime_redeemed ?? 0);
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -48,8 +73,8 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
             <p className="text-sm text-ink-500">PRAP Coin balance</p>
             <Coins className="h-5 w-5 text-brand-600" />
           </div>
-          <p className="mt-2 text-3xl font-extrabold">25,000</p>
-          <p className="text-xs text-ink-500">≈ ₹25,000 · Redeemable after 50% milestone</p>
+          <p className="mt-2 text-3xl font-extrabold">{balance.toLocaleString("en-IN")}</p>
+          <p className="text-xs text-ink-500">≈ ₹{balance.toLocaleString("en-IN")} · Redeemable after 50% milestone</p>
         </div>
         <div className="card p-6">
           <div className="flex items-center justify-between">
@@ -64,25 +89,12 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
             <p className="text-sm text-ink-500">Lifetime earnings</p>
             <TrendingUp className="h-5 w-5 text-brand-600" />
           </div>
-          <p className="mt-2 text-3xl font-extrabold">₹0</p>
+          <p className="mt-2 text-3xl font-extrabold">₹{lifetimeRedeemed.toLocaleString("en-IN")}</p>
           <p className="text-xs text-ink-500">Across all redemptions to bank</p>
         </div>
       </section>
 
-      {role === "corporate" && (
-        <section className="card p-6">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <p className="text-sm text-ink-500">Your corporate referral code</p>
-              <p className="mt-1 font-mono text-2xl font-extrabold tracking-tight">{refCode}</p>
-              <p className="mt-2 text-sm text-ink-700">Share this code with employees & partners. You earn 5,000 coins per visit.</p>
-            </div>
-            <button className="btn-outline">
-              <Copy className="h-4 w-4" /> Copy code
-            </button>
-          </div>
-        </section>
-      )}
+      {role === "corporate" && <ReferralCodeCard initialCode={refCode} />}
 
       {role === "broker" && (
         <section className="card p-6">

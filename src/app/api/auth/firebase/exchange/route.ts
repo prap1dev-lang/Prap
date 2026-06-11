@@ -4,6 +4,7 @@ import { firebaseAdmin } from "@/lib/firebase-admin";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { COIN } from "@/lib/coins";
 import { verifyPan } from "@/lib/surepass";
+import { genReferralCode } from "@/lib/utils";
 
 /**
  * Firebase-OTP-only auth. No Supabase magic link, no redirect dance.
@@ -144,13 +145,34 @@ export async function POST(req: Request) {
 
     let referredByCorporate: string | null = null;
     if (role === "referrer" && profile.referralCode) {
+      const code = profile.referralCode.trim().toUpperCase();
       const { data: refRow } = await admin
         .from("referral_codes")
-        .select("corporate_id")
-        .eq("code", profile.referralCode)
+        .select("corporate_id, corporate:users!referral_codes_corporate_id_fkey ( id, role, pan, phone )")
+        .eq("code", code)
         .eq("active", true)
         .maybeSingle();
-      referredByCorporate = (refRow as any)?.corporate_id ?? null;
+
+      const corp = (refRow as any)?.corporate;
+      if (!refRow || !corp || corp.role !== "corporate") {
+        return NextResponse.json(
+          { ok: false, error: "Invalid or inactive referral code." },
+          { status: 400 },
+        );
+      }
+      // Self-referral block: can't refer your own (would-be) account, and the
+      // corporate can't share the referrer's PAN or phone (same human).
+      const samePerson =
+        corp.id === authUserId ||
+        (corp.pan && corp.pan === profile.pan) ||
+        (corp.phone && corp.phone === profile.phone);
+      if (samePerson) {
+        return NextResponse.json(
+          { ok: false, error: "You cannot use your own referral code." },
+          { status: 400 },
+        );
+      }
+      referredByCorporate = corp.id;
     }
 
     const { error: insertUserErr } = await admin.from("users").insert({
@@ -196,8 +218,17 @@ export async function POST(req: Request) {
     }
 
     if (role === "corporate") {
-      const code = "PRAP-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-      await admin.from("referral_codes").insert({ corporate_id: authUserId, code, active: true });
+      // Retry once on the unlikely code collision (unique on code).
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { error: codeErr } = await admin
+          .from("referral_codes")
+          .insert({ corporate_id: authUserId, code: genReferralCode(), active: true });
+        if (!codeErr) break;
+        if ((codeErr as any).code !== "23505") {
+          console.error("[exchange] referral_code insert failed:", codeErr);
+          break; // non-fatal: corporate can rotate a code later
+        }
+      }
     }
 
     // best-effort PAN verification (non-blocking)

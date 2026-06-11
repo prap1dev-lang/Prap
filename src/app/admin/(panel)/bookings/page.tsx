@@ -1,6 +1,7 @@
 import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
+import ConfirmVisitButton from "@/components/admin/ConfirmVisitButton";
 
 export const metadata = buildMetadata({ title: "Bookings · Admin", path: "/admin/bookings", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ export default async function BookingsAdmin() {
               <th className="px-5 py-3 text-left">Aadhaar last 4</th>
               <th className="px-5 py-3 text-left">Visits</th>
               <th className="px-5 py-3 text-left">Status</th>
+              <th className="px-5 py-3 text-left">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -46,10 +48,17 @@ export default async function BookingsAdmin() {
                 <td className="px-5 py-3 font-mono text-xs">XXXX-XXXX-{r.client?.aadhaar_last4}</td>
                 <td className="px-5 py-3">{r.visits_completed}</td>
                 <td className="px-5 py-3"><span className="badge">{r.status}</span></td>
+                <td className="px-5 py-3">
+                  <ConfirmVisitButton
+                    bookingId={r.id}
+                    nextVisitNo={(r.visits_completed ?? 0) + 1}
+                    clientName={r.client?.name ?? "client"}
+                  />
+                </td>
               </tr>
             ))}
             {(!rows || rows.length === 0) && (
-              <tr><td colSpan={7} className="px-5 py-10 text-center text-ink-500">No bookings yet.</td></tr>
+              <tr><td colSpan={8} className="px-5 py-10 text-center text-ink-500">No bookings yet.</td></tr>
             )}
           </tbody>
         </table>

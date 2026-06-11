@@ -24,11 +24,20 @@ function normalizePhone(p: string) {
   return `+${trimmed.replace(/^\+/, "")}`;
 }
 
-export default function SignupForm({ initialRole }: { initialRole?: Role }) {
+export default function SignupForm({
+  initialRole,
+  initialReferral = "",
+}: {
+  initialRole?: Role;
+  initialReferral?: string;
+}) {
   const [role, setRole] = useState<Role>(
-    initialRole && (["broker", "corporate", "referrer"] as Role[]).includes(initialRole)
-      ? initialRole
-      : "referrer",
+    // A referral link implies the referrer role.
+    initialReferral
+      ? "referrer"
+      : initialRole && (["broker", "corporate", "referrer"] as Role[]).includes(initialRole)
+        ? initialRole
+        : "referrer",
   );
   const [step, setStep] = useState<"form" | "otp">("form");
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +49,7 @@ export default function SignupForm({ initialRole }: { initialRole?: Role }) {
     pan: "",
     aadhaar: "",
     rera: "",
-    referralCode: "",
+    referralCode: initialReferral.toUpperCase(),
   });
   const [otp, setOtp] = useState("");
   const confirmationRef = useRef<ConfirmationResult | null>(null);
