@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Copy, Check, RefreshCw, Share2, Loader2 } from "lucide-react";
+import { Copy, Check, Share2 } from "lucide-react";
 
 /**
- * Referral code card for any role. Shows the active code, copies / shares the
- * signup link, and can rotate it (old code deactivated server-side, attribution
- * preserved). Both the referrer and the new user earn coins on signup.
+ * Referral code card for any role. Shows the user's one permanent code and
+ * copies / shares the signup link. Both the referrer and the new user earn
+ * coins on signup. The code never changes.
  */
 export default function ReferralCodeCard({
   initialCode,
@@ -16,7 +16,6 @@ export default function ReferralCodeCard({
 }) {
   const [code, setCode] = useState<string | null>(initialCode);
   const [copied, setCopied] = useState(false);
-  const [rotating, setRotating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const link = code
@@ -63,22 +62,6 @@ export default function ReferralCodeCard({
     }
   }
 
-  async function rotate() {
-    if (!confirm("Rotate your code? The old code stops working for NEW signups.")) return;
-    setRotating(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/corporate/referral-code", { method: "POST" });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) throw new Error(body.error || "Rotate failed");
-      setCode(body.code);
-    } catch (e: any) {
-      setError(e?.message || "Could not rotate code");
-    } finally {
-      setRotating(false);
-    }
-  }
-
   return (
     <section className="card p-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -101,10 +84,6 @@ export default function ReferralCodeCard({
           </button>
           <button className="btn-outline" onClick={share}>
             <Share2 className="h-4 w-4" /> Share
-          </button>
-          <button className="btn-ghost" onClick={rotate} disabled={rotating}>
-            {rotating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Rotate
           </button>
         </div>
       </div>

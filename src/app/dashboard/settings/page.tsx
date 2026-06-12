@@ -15,7 +15,7 @@ export default async function SettingsPage() {
     ? await admin
         .from("users")
         .select(
-          "name, email, phone, pan, role, rera_number, upi_id, bank_account, bank_ifsc, pan_verified, aadhaar_verified, rera_verified",
+          "name, email, phone, pan, role, rera_number, upi_id, bank_account, bank_ifsc, photo_url, pan_verified, aadhaar_verified, rera_verified",
         )
         .eq("id", me.authId)
         .maybeSingle()
@@ -38,6 +38,7 @@ export default async function SettingsPage() {
     upi_id: data?.upi_id ?? "",
     bank_account: data?.bank_account ?? "",
     bank_ifsc: data?.bank_ifsc ?? "",
+    photo_url: data?.photo_url ?? docUrls.photo ?? null,
     pan_verified: !!data?.pan_verified,
     aadhaar_verified: !!data?.aadhaar_verified,
     rera_verified: !!data?.rera_verified,

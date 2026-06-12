@@ -18,7 +18,8 @@
       "Bash(git commit --amend -m 'Use Firebase OTP as sole auth; remove Supabase magic-link flow *)",
       "Bash(git add *)",
       "Bash(git restore *)",
-      "Bash(git commit -m 'Wire referral & visit-credit system end-to-end *)"
+      "Bash(git commit -m 'Wire referral & visit-credit system end-to-end *)",
+      "Bash(grep -rn \"TODO\\\\|return NextResponse.json\\({ ok: true, bookings: \\\\[\\\\] }\\)\\\\|B-DEMO\\\\|not yet\\\\|TODO:\" src --include=\"*.ts\")"
     ]
   }
 }

@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { Loader2, Check, AlertTriangle, ShieldCheck } from "lucide-react";
+import { useState, useRef } from "react";
+import { Loader2, Check, AlertTriangle, ShieldCheck, UserRound, Pencil } from "lucide-react";
 
 export type Profile = {
   name: string | null;
@@ -12,6 +12,7 @@ export type Profile = {
   upi_id: string | null;
   bank_account: string | null;
   bank_ifsc: string | null;
+  photo_url: string | null;
   pan_verified: boolean;
   aadhaar_verified: boolean;
   rera_verified: boolean;
@@ -69,7 +70,16 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
           <h2 className="font-bold">Personal details</h2>
           <VerifyBadge label="PAN" ok={initial.pan_verified} />
         </div>
-        <div className="mt-4 grid sm:grid-cols-2 gap-4">
+
+        <div className="mt-5 flex items-center gap-4">
+          <AvatarUpload initialUrl={initial.photo_url} name={form.name || initial.name} />
+          <div>
+            <p className="font-semibold text-ink-900">{form.name || initial.name || "Your name"}</p>
+            <p className="text-sm text-ink-500 capitalize">{initial.role}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid sm:grid-cols-2 gap-4">
           <Field label="Full name">
             <input className="input" value={form.name} onChange={(e) => set("name", e.target.value)} />
           </Field>
@@ -153,6 +163,73 @@ function Field({ label, hint, full, children }: { label: string; hint?: string; 
         {hint && <span className="text-[11px] font-normal text-ink-400">· {hint}</span>}
       </label>
       {children}
+    </div>
+  );
+}
+
+function AvatarUpload({ initialUrl, name }: { initialUrl: string | null; name: string | null }) {
+  const [url, setUrl] = useState<string | null>(initialUrl);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("kind", "photo");
+      const res = await fetch("/api/kyc/upload", { method: "POST", body: fd });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || "Upload failed");
+      setUrl(body.url);
+    } catch (err: any) {
+      setError(err?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="group relative h-20 w-20 rounded-full overflow-hidden border border-ink-200 bg-ink-50 grid place-items-center"
+        aria-label="Edit profile photo"
+        title="Edit profile photo"
+      >
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={name || "Profile photo"} className="h-full w-full object-cover" />
+        ) : (
+          <UserRound className="h-9 w-9 text-ink-400" />
+        )}
+        <span className="absolute inset-0 grid place-items-center bg-ink-900/0 group-hover:bg-ink-900/40 transition">
+          {uploading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-white" />
+          ) : (
+            <Pencil className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition" />
+          )}
+        </span>
+      </button>
+      {/* explicit Edit button next to the avatar for discoverability */}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="absolute -bottom-1 -right-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white shadow-card hover:bg-brand-700"
+        aria-label="Edit photo"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+      {error && <p className="mt-1 text-[11px] text-rose-700 w-24">{error}</p>}
     </div>
   );
 }

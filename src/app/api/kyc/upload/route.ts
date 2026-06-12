@@ -62,6 +62,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
+    // A profile photo also becomes the user's avatar.
+    if (kind === "photo") {
+      await admin.from("users").update({ photo_url: result.url }).eq("id", me.authId);
+    }
+
     return NextResponse.json({ ok: true, url: result.url, kind });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || "Upload failed" }, { status: 500 });

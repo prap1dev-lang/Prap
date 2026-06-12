@@ -199,11 +199,12 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
-      // Self-referral block: same account, or shared PAN / phone (same human).
+      // Self-referral block: only the SAME account or the SAME Aadhaar identity
+      // is treated as self. (PAN/phone alone are NOT used — a shared PAN across
+      // test accounts or family phones must not block a legitimate referral.)
       const samePerson =
         owner.id === authUserId ||
-        (owner.pan && owner.pan === profile.pan) ||
-        (owner.phone && owner.phone === profile.phone);
+        (owner.aadhaar_hash && owner.aadhaar_hash === aadhaarHash);
       if (samePerson) {
         return NextResponse.json(
           { ok: false, error: "You cannot use your own referral code." },

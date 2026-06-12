@@ -45,6 +45,7 @@ export type ReferralOwner = {
   role: string;
   pan: string | null;
   phone: string | null;
+  aadhaar_hash: string | null;
 };
 
 /** Look up the owner of an active referral code (any role). */
@@ -52,7 +53,7 @@ export async function lookupReferralOwner(code: string): Promise<ReferralOwner |
   const admin = supabaseAdmin();
   const { data } = await admin
     .from("referral_codes")
-    .select("corporate_id, owner:users!referral_codes_corporate_id_fkey ( id, role, pan, phone )")
+    .select("corporate_id, owner:users!referral_codes_corporate_id_fkey ( id, role, pan, phone, aadhaar_hash )")
     .eq("code", code.trim().toUpperCase())
     .eq("active", true)
     .maybeSingle();
