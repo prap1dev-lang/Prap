@@ -13,7 +13,12 @@
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\websitem\\\\Prap\\\\src\\\\app\\\\api\\\\admin\\\\upload\")",
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\websitem\\\\Prap\\\\src\\\\app\\\\api\\\\admin\\\\projects\")",
       "Bash(git push *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(git commit -m '@ *)",
+      "Bash(git commit --amend -m 'Use Firebase OTP as sole auth; remove Supabase magic-link flow *)",
+      "Bash(git add *)",
+      "Bash(git restore *)",
+      "Bash(git commit -m 'Wire referral & visit-credit system end-to-end *)"
     ]
   }
 }

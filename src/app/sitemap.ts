@@ -9,6 +9,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/about",
     "/how-it-works",
     "/projects",
+    "/buyer-protection",
+    "/buyer-protection/health-score",
     "/contact",
     "/faq",
     "/auth/login",

@@ -16,7 +16,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
   const { data: row } = me
     ? await admin
         .from("users")
-        .select("pan_verified, aadhaar_verified, rera_verified")
+        .select("name, pan_verified, aadhaar_verified, rera_verified")
         .eq("id", me.authId)
         .maybeSingle()
     : { data: null as any };
@@ -62,7 +62,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <p className="text-sm text-ink-500 capitalize">{role} dashboard</p>
-          <h1 className="text-3xl font-extrabold tracking-tight">Hello, Investor 👋</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Hello, {row?.name?.split(" ")[0] || me?.name?.split(" ")[0] || "Investor"} 👋</h1>
         </div>
         <Link href="/projects" className="btn-primary">Book a site visit</Link>
       </header>
@@ -98,10 +98,12 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
 
       {role === "broker" && (
         <section className="card p-6">
-          <p className="text-sm text-ink-500">RERA verification status</p>
-          <p className="mt-1 text-lg font-bold text-amber-700">Pending admin review</p>
+          <p className="text-sm text-ink-500">Channel partner status</p>
+          <p className="mt-1 text-lg font-bold text-emerald-700">Active</p>
           <p className="mt-2 text-sm text-ink-700">
-            Your UP-RERA registration is queued for verification. You'll be able to book client visits within 1 business day.
+            {row?.rera_verified
+              ? "Your UP-RERA registration is verified. You can book client visits and earn referral rewards."
+              : "Your account is active. Add your UP-RERA registration in Settings to display the verified badge on your profile."}
           </p>
         </section>
       )}

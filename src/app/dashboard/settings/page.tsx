@@ -1,24 +1,47 @@
 import { buildMetadata } from "@/lib/seo";
+import { getSessionUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import ProfileForm, { type Profile } from "@/components/dashboard/ProfileForm";
 
 export const metadata = buildMetadata({ title: "Settings", path: "/dashboard/settings", noIndex: true });
+export const dynamic = "force-dynamic";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const me = await getSessionUser();
+  const admin = supabaseAdmin();
+
+  const { data } = me
+    ? await admin
+        .from("users")
+        .select(
+          "name, email, phone, pan, role, rera_number, upi_id, bank_account, bank_ifsc, pan_verified, aadhaar_verified, rera_verified",
+        )
+        .eq("id", me.authId)
+        .maybeSingle()
+    : { data: null as any };
+
+  const profile: Profile = {
+    name: data?.name ?? me?.name ?? "",
+    email: data?.email ?? me?.email ?? "",
+    phone: data?.phone ?? "",
+    pan: data?.pan ?? "",
+    role: (data?.role ?? me?.role ?? "referrer") as Profile["role"],
+    rera_number: data?.rera_number ?? "",
+    upi_id: data?.upi_id ?? "",
+    bank_account: data?.bank_account ?? "",
+    bank_ifsc: data?.bank_ifsc ?? "",
+    pan_verified: !!data?.pan_verified,
+    aadhaar_verified: !!data?.aadhaar_verified,
+    rera_verified: !!data?.rera_verified,
+  };
+
   return (
     <div className="max-w-3xl">
-      <h1 className="text-3xl font-extrabold tracking-tight">Profile & Settings</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">Profile &amp; Settings</h1>
       <p className="mt-2 text-ink-500">Manage your KYC documents, payout methods and notifications.</p>
 
       <div className="mt-8 grid gap-6">
-        <section className="card p-6">
-          <h2 className="font-bold">Personal details</h2>
-          <div className="mt-4 grid sm:grid-cols-2 gap-4">
-            <div><label className="label">Full name</label><input className="input" defaultValue="Investor" /></div>
-            <div><label className="label">Phone</label><input className="input" defaultValue="+91-98XXXXXXXX" disabled /></div>
-            <div><label className="label">Email</label><input className="input" defaultValue="you@example.com" /></div>
-            <div><label className="label">PAN</label><input className="input uppercase" defaultValue="ABCDE1234F" /></div>
-          </div>
-          <button className="btn-primary mt-5">Save changes</button>
-        </section>
+        <ProfileForm initial={profile} />
 
         <section className="card p-6">
           <h2 className="font-bold">KYC documents</h2>
@@ -27,15 +50,6 @@ export default function SettingsPage() {
             <DocBox label="PAN card" />
             <DocBox label="Profile photo" />
           </div>
-        </section>
-
-        <section className="card p-6">
-          <h2 className="font-bold">Payout methods</h2>
-          <div className="mt-4 grid sm:grid-cols-2 gap-4">
-            <div><label className="label">UPI ID</label><input className="input" placeholder="name@upi" /></div>
-            <div><label className="label">Bank account</label><input className="input" placeholder="XXXXXXXX1234" /></div>
-          </div>
-          <button className="btn-primary mt-5">Save</button>
         </section>
       </div>
     </div>

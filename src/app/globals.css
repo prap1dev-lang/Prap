@@ -75,3 +75,10 @@ body {
   background: rgba(27, 67, 50, 0.18);
   color: #1B4332;
 }
+
+/* Hide the floating Google reCAPTCHA badge.
+   Firebase phone-auth still runs the invisible reCAPTCHA challenge — only the
+   badge UI is hidden. reCAPTCHA branding is disclosed on /privacy instead. */
+.grecaptcha-badge {
+  visibility: hidden !important;
+}

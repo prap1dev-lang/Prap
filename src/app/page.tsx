@@ -5,6 +5,7 @@ import ProjectsShowcase from "@/components/site/ProjectsShowcase";
 import BuyerServices from "@/components/site/BuyerServices";
 import HowItWorks from "@/components/site/HowItWorks";
 import RewardCalculator from "@/components/site/RewardCalculator";
+import EmiCalculator from "@/components/site/EmiCalculator";
 import CTA from "@/components/site/CTA";
 import Footer from "@/components/site/Footer";
 import { buildMetadata, realEstateAgentJsonLd } from "@/lib/seo";
@@ -28,6 +29,7 @@ export default function HomePage() {
         <BuyerServices />
         <HowItWorks />
         <RewardCalculator />
+        <EmiCalculator />
         <CTA />
       </main>
       <Footer />

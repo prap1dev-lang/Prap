@@ -5,8 +5,8 @@ import { Menu, X, Coins } from "lucide-react";
 
 const links = [
   { href: "/projects", label: "Projects" },
+  { href: "/buyer-protection", label: "Buyer Protection" },
   { href: "/city/noida", label: "Noida" },
-  { href: "/city/greater-noida", label: "Greater Noida" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/for-brokers", label: "Brokers" },
   { href: "/for-corporates", label: "Corporates" },
