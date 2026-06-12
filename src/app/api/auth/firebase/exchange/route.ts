@@ -4,7 +4,7 @@ import { firebaseAdmin } from "@/lib/firebase-admin";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { COIN } from "@/lib/coins";
 import { verifyPan } from "@/lib/surepass";
-import { genReferralCode } from "@/lib/utils";
+import { ensureReferralCode, lookupReferralOwner, creditCoins } from "@/lib/referrals";
 
 /**
  * Firebase-OTP-only auth. No Supabase magic link, no redirect dance.
@@ -189,36 +189,30 @@ export async function POST(req: Request) {
     const aadhaarHash = await sha256Hex(profile.aadhaar);
     const aadhaarLast4 = profile.aadhaar.slice(-4);
 
-    let referredByCorporate: string | null = null;
-    if (role === "referrer" && profile.referralCode) {
-      const code = profile.referralCode.trim().toUpperCase();
-      const { data: refRow } = await admin
-        .from("referral_codes")
-        .select("corporate_id, corporate:users!referral_codes_corporate_id_fkey ( id, role, pan, phone )")
-        .eq("code", code)
-        .eq("active", true)
-        .maybeSingle();
-
-      const corp = (refRow as any)?.corporate;
-      if (!refRow || !corp || corp.role !== "corporate") {
+    // ---- Referral resolution: ANY user's code can refer ANY new user ----
+    let referrerId: string | null = null;
+    let referrerIsCorporate = false;
+    if (profile.referralCode) {
+      const owner = await lookupReferralOwner(profile.referralCode);
+      if (!owner) {
         return NextResponse.json(
           { ok: false, error: "Invalid or inactive referral code." },
           { status: 400 },
         );
       }
-      // Self-referral block: can't refer your own (would-be) account, and the
-      // corporate can't share the referrer's PAN or phone (same human).
+      // Self-referral block: same account, or shared PAN / phone (same human).
       const samePerson =
-        corp.id === authUserId ||
-        (corp.pan && corp.pan === profile.pan) ||
-        (corp.phone && corp.phone === profile.phone);
+        owner.id === authUserId ||
+        (owner.pan && owner.pan === profile.pan) ||
+        (owner.phone && owner.phone === profile.phone);
       if (samePerson) {
         return NextResponse.json(
           { ok: false, error: "You cannot use your own referral code." },
           { status: 400 },
         );
       }
-      referredByCorporate = corp.id;
+      referrerId = owner.id;
+      referrerIsCorporate = owner.role === "corporate";
     }
 
     const { error: insertUserErr } = await admin.from("users").insert({
@@ -231,7 +225,9 @@ export async function POST(req: Request) {
       aadhaar_hash: aadhaarHash,
       aadhaar_last4: aadhaarLast4,
       rera_number: profile.rera || null,
-      referred_by_corporate: referredByCorporate,
+      referred_by: referrerId,
+      // Keep employer attribution only when the referrer is a corporate.
+      referred_by_corporate: referrerIsCorporate ? referrerId : null,
       kyc_status: "pending",
     });
 
@@ -263,17 +259,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: (ledgerErr as any).message }, { status: 500 });
     }
 
-    if (role === "corporate") {
-      // Retry once on the unlikely code collision (unique on code).
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const { error: codeErr } = await admin
-          .from("referral_codes")
-          .insert({ corporate_id: authUserId, code: genReferralCode(), active: true });
-        if (!codeErr) break;
-        if ((codeErr as any).code !== "23505") {
-          console.error("[exchange] referral_code insert failed:", codeErr);
-          break; // non-fatal: corporate can rotate a code later
-        }
+    // Every new user gets their own referral code so they can refer others.
+    try {
+      await ensureReferralCode(authUserId);
+    } catch (e: any) {
+      console.error("[exchange] ensureReferralCode failed:", e?.message);
+      // non-fatal: user can still operate; code can be created on demand later
+    }
+
+    // ---- Dual referral reward: BOTH parties get a fixed bonus (best-effort) ----
+    if (referrerId) {
+      try {
+        await creditCoins(admin, authUserId, COIN.REFERRAL_BONUS, "referral_bonus", {
+          notes: "Referral signup bonus",
+          refTable: "users",
+          refId: referrerId,
+        });
+        await creditCoins(admin, referrerId, COIN.REFERRAL_BONUS, "referral_bonus", {
+          notes: `Referral reward — invited ${profile.name}`,
+          refTable: "users",
+          refId: authUserId,
+        });
+      } catch (e: any) {
+        console.error("[exchange] referral bonus credit failed:", e?.message);
+        // non-fatal: onboarding already succeeded
       }
     }
 

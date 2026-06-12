@@ -1,20 +1,36 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Copy, Check, RefreshCw, Share2, Loader2 } from "lucide-react";
 
 /**
- * Corporate referral code card. Shows the active code, copies / shares it, and
- * can rotate it (old code is deactivated server-side, attribution preserved).
+ * Referral code card for any role. Shows the active code, copies / shares the
+ * signup link, and can rotate it (old code deactivated server-side, attribution
+ * preserved). Both the referrer and the new user earn coins on signup.
  */
-export default function ReferralCodeCard({ initialCode }: { initialCode: string | null }) {
+export default function ReferralCodeCard({
+  initialCode,
+  role = "referrer",
+}: {
+  initialCode: string | null;
+  role?: "broker" | "corporate" | "referrer" | "admin";
+}) {
   const [code, setCode] = useState<string | null>(initialCode);
   const [copied, setCopied] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const shareText = code
-    ? `Join PRAP with my referral code ${code} and start earning PRAP Coins on your property visits. https://prap.in/auth/signup?ref=${code}`
+  const link = code
+    ? `${typeof window !== "undefined" ? window.location.origin : "https://prap.in"}/auth/signup?ref=${code}`
     : "";
+  const shareText = code
+    ? `Join PRAP with my referral code ${code} — we each get 5,000 PRAP Coins (₹5,000) when you sign up. ${link}`
+    : "";
+
+  // Auto-fetch a code if the user doesn't have one yet.
+  useEffect(() => {
+    if (!code) void loadIfMissing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function loadIfMissing() {
     if (code) return;
@@ -25,8 +41,8 @@ export default function ReferralCodeCard({ initialCode }: { initialCode: string 
 
   async function copy() {
     await loadIfMissing();
-    if (!code) return;
-    await navigator.clipboard.writeText(code);
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -67,19 +83,21 @@ export default function ReferralCodeCard({ initialCode }: { initialCode: string 
     <section className="card p-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-sm text-ink-500">Your corporate referral code</p>
+          <p className="text-sm text-ink-500">
+            {role === "corporate" ? "Your corporate referral code" : "Your referral code"}
+          </p>
           <p className="mt-1 font-mono text-2xl font-extrabold tracking-tight">
             {code ?? "—"}
           </p>
           <p className="mt-2 text-sm text-ink-700">
-            Share with employees &amp; partners. You earn 5,000 coins per qualifying visit.
+            Share your link — you <strong>and</strong> your friend each earn 5,000 PRAP Coins (₹5,000) when they sign up.
           </p>
           {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
         </div>
         <div className="flex gap-2 flex-wrap">
           <button className="btn-outline" onClick={copy}>
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? "Copied link" : "Copy link"}
           </button>
           <button className="btn-outline" onClick={share}>
             <Share2 className="h-4 w-4" /> Share

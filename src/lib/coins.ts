@@ -5,6 +5,8 @@
 
 export const COIN = {
   ONBOARDING_BONUS: 25_000,
+  // Paid to BOTH the referrer and the newly-referred user on successful signup.
+  REFERRAL_BONUS: 5_000,
   INVESTMENT_TIERS: [
     { upTo: 1_00_00_000, coins: 25_000 },       // ≤ 1 Cr
     { upTo: 2_00_00_000, coins: 50_000 },       // 1 - 2 Cr

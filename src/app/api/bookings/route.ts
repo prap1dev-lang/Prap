@@ -1,55 +1,125 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase-server";
 
 /**
- * Create a new booking (a "site visit slot") with Aadhaar lock-in.
+ * Self-serve booking — any authenticated user (broker / corporate / referrer)
+ * can book a site visit for a RERA-verified project. The booking immediately
+ * appears in the admin panel as an in-process item.
  *
- * Lock-in logic (enforced in DB via UNIQUE(project_id, client_aadhaar_hash)):
- *  - Once a broker locks a client (hashed Aadhaar) to a project, no other broker
- *    can create a booking for the same (project, client_aadhaar_hash).
- *  - Re-attempts return 409 CONFLICT with the locking broker's masked info.
+ * Aadhaar lock-in: the DB enforces UNIQUE(project_id, client_aadhaar_hash), so a
+ * project+client pair can only be locked once. A second attempt returns 409 with
+ * the locking broker's (masked) name.
+ *
+ *   GET  → the caller's own bookings (newest first).
+ *   POST → create a booking for { projectSlug, scheduledAt, notes? }.
  */
 
-const FamilyMember = z.object({
-  name: z.string().min(2),
-  aadhaarLast4: z.string().regex(/^\d{4}$/),
-});
-
 const Body = z.object({
-  projectId: z.string(),
-  brokerId: z.string(),
-  client: z.object({
-    name: z.string().min(2),
-    phone: z.string(),
-    aadhaarFull: z.string().length(12),
-  }),
-  familyMembers: z.array(FamilyMember).min(2, "Minimum 2 family members required"),
-  scheduledAt: z.string(),
+  projectSlug: z.string().min(1),
+  scheduledAt: z.string().min(1), // ISO datetime
+  notes: z.string().max(500).optional(),
 });
 
 export async function POST(req: Request) {
-  const json = await req.json().catch(() => ({}));
-  const parsed = Body.safeParse(json);
+  const me = await requireUser();
+  const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ ok: false, error: parsed.error.flatten().fieldErrors }, { status: 400 });
+  }
+  const { projectSlug, scheduledAt, notes } = parsed.data;
+  const admin = supabaseAdmin();
+
+  // Resolve the real project row (bookings.project_id is a strict FK).
+  const { data: project } = await admin
+    .from("projects")
+    .select("id, name, city")
+    .eq("slug", projectSlug)
+    .maybeSingle();
+  if (!project) {
+    return NextResponse.json(
+      { ok: false, error: "This project isn't available for online booking yet. Please contact us." },
+      { status: 404 },
+    );
   }
 
-  // TODO:
-  // 1. Hash client.aadhaarFull -> client_aadhaar_hash
-  // 2. INSERT into bookings (id, project_id, broker_id, client_id, client_aadhaar_hash, scheduled_at)
-  //    - DB UNIQUE constraint enforces lock-in.
-  //    - On 23505 (UNIQUE violation) -> respond 409 with masked broker info from DB.
-  // 3. INSERT family members into booking_family_members table.
-  // 4. Set visit_no = (SELECT COUNT(*) FROM bookings WHERE project_id = ? AND client_id = ?) + 1
-  // 5. Schedule reminder SMS to client & broker.
+  // The booker is the client. We need their stored Aadhaar hash for lock-in.
+  const { data: meRow } = await admin
+    .from("users")
+    .select("aadhaar_hash, role")
+    .eq("id", me.authId)
+    .maybeSingle();
+  if (!meRow?.aadhaar_hash) {
+    return NextResponse.json(
+      { ok: false, error: "Complete your KYC before booking a visit." },
+      { status: 422 },
+    );
+  }
+
+  const when = new Date(scheduledAt);
+  if (Number.isNaN(when.getTime())) {
+    return NextResponse.json({ ok: false, error: "Invalid visit date/time." }, { status: 400 });
+  }
+
+  const { data: booking, error } = await admin
+    .from("bookings")
+    .insert({
+      project_id: project.id,
+      // A broker booking is attributed to them; other roles self-book.
+      broker_id: meRow.role === "broker" ? me.authId : null,
+      client_id: me.authId,
+      client_aadhaar_hash: meRow.aadhaar_hash,
+      scheduled_at: when.toISOString(),
+      status: "scheduled",
+      created_by: me.authId,
+      notes: notes ?? null,
+    })
+    .select("id, status, scheduled_at")
+    .maybeSingle();
+
+  if (error) {
+    const e = error as any;
+    if (e.code === "23505") {
+      // Lock-in violation — surface who holds the lock.
+      const { data: locked } = await admin
+        .from("bookings")
+        .select("broker:users!bookings_broker_id_fkey ( name ), client:users!bookings_client_id_fkey ( name )")
+        .eq("project_id", project.id)
+        .eq("client_aadhaar_hash", meRow.aadhaar_hash)
+        .maybeSingle();
+      const holder = (locked as any)?.broker?.name || (locked as any)?.client?.name || "another user";
+      return NextResponse.json(
+        { ok: false, error: `This project is already locked to ${holder} for your Aadhaar.` },
+        { status: 409 },
+      );
+    }
+    console.error("[bookings] insert failed:", e);
+    return NextResponse.json({ ok: false, error: e.message || "Could not create booking." }, { status: 500 });
+  }
+
+  // Audit trail so admins can trace self-serve bookings.
+  await admin.from("audit_log").insert({
+    actor_id: me.authId,
+    action: "booking_created",
+    payload: { booking_id: booking?.id, project: project.name, role: meRow.role },
+  });
 
   return NextResponse.json({
     ok: true,
-    booking: { id: "B-DEMO", visitNo: 1, status: "scheduled" },
+    booking: { id: booking?.id, status: booking?.status, project: project.name, scheduledAt: booking?.scheduled_at },
   });
 }
 
-export async function GET(req: Request) {
-  // TODO: list bookings for current user (broker | client) with pagination
-  return NextResponse.json({ ok: true, bookings: [] });
+export async function GET() {
+  const me = await requireUser();
+  const admin = supabaseAdmin();
+  const { data, error } = await admin
+    .from("bookings")
+    .select("id, status, scheduled_at, visits_completed, created_at, project:projects ( name, city )")
+    .or(`client_id.eq.${me.authId},broker_id.eq.${me.authId},created_by.eq.${me.authId}`)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true, bookings: data ?? [] });
 }

@@ -34,7 +34,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
     : { data: null as any };
 
   let refCode: string | null = null;
-  if (me && role === "corporate") {
+  if (me) {
     const { data: rc } = await admin
       .from("referral_codes")
       .select("code")
@@ -64,7 +64,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
           <p className="text-sm text-ink-500 capitalize">{role} dashboard</p>
           <h1 className="text-3xl font-extrabold tracking-tight">Hello, {row?.name?.split(" ")[0] || me?.name?.split(" ")[0] || "Investor"} 👋</h1>
         </div>
-        <Link href="/projects" className="btn-primary">Book a site visit</Link>
+        <Link href="/dashboard/bookings" className="btn-primary">Book a site visit</Link>
       </header>
 
       <section className="grid gap-5 md:grid-cols-3">
@@ -94,7 +94,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
         </div>
       </section>
 
-      {role === "corporate" && <ReferralCodeCard initialCode={refCode} />}
+      <ReferralCodeCard initialCode={refCode} role={role} />
 
       {role === "broker" && (
         <section className="card p-6">
