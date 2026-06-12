@@ -3,7 +3,6 @@ import { z } from "zod";
 import { firebaseAdmin } from "@/lib/firebase-admin";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { COIN } from "@/lib/coins";
-import { verifyPan } from "@/lib/surepass";
 import { ensureReferralCode, lookupReferralOwner, creditCoins } from "@/lib/referrals";
 
 /**
@@ -286,36 +285,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // best-effort PAN verification (non-blocking)
-    try {
-      const r = await verifyPan(profile.pan);
-      await admin.from("kyc_verifications").insert({
-        user_id: authUserId,
-        kind: "pan",
-        input: { pan: profile.pan },
-        ok: r.valid,
-        response: r.raw,
-      });
-      if (r.valid) {
-        await admin
-          .from("users")
-          .update({
-            pan_verified: true,
-            pan_verified_at: new Date().toISOString(),
-            pan_full_name: r.fullName,
-          })
-          .eq("id", authUserId);
-      }
-    } catch (e: any) {
-      await admin.from("kyc_verifications").insert({
-        user_id: authUserId,
-        kind: "pan",
-        input: { pan: profile.pan },
-        ok: false,
-        error: e?.message,
-      });
-    }
-
+    // PAN is stored as a plain profile detail — no external verification.
     createdProfile = true;
   }
 

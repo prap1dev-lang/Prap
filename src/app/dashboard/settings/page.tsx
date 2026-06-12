@@ -2,6 +2,7 @@ import { buildMetadata } from "@/lib/seo";
 import { getSessionUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import ProfileForm, { type Profile } from "@/components/dashboard/ProfileForm";
+import DocUpload from "@/components/dashboard/DocUpload";
 
 export const metadata = buildMetadata({ title: "Settings", path: "/dashboard/settings", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -19,6 +20,13 @@ export default async function SettingsPage() {
         .eq("id", me.authId)
         .maybeSingle()
     : { data: null as any };
+
+  // Load any documents already uploaded to Cloudinary (kind -> url).
+  const { data: docRows } = me
+    ? await admin.from("kyc_docs").select("kind, storage_key").eq("user_id", me.authId)
+    : { data: [] as any[] };
+  const docUrls: Record<string, string> = {};
+  for (const d of docRows ?? []) docUrls[d.kind] = d.storage_key;
 
   const profile: Profile = {
     name: data?.name ?? me?.name ?? "",
@@ -45,25 +53,19 @@ export default async function SettingsPage() {
 
         <section className="card p-6">
           <h2 className="font-bold">KYC documents</h2>
+          <p className="mt-1 text-sm text-ink-500">
+            Upload clear photos or PDFs. Files are stored securely and reviewed by our team.
+          </p>
           <div className="mt-4 grid sm:grid-cols-3 gap-4">
-            <DocBox label="Aadhaar card" />
-            <DocBox label="PAN card" />
-            <DocBox label="Profile photo" />
+            <DocUpload kind="aadhaar" label="Aadhaar card" initialUrl={docUrls.aadhaar} />
+            <DocUpload kind="pan" label="PAN card" initialUrl={docUrls.pan} />
+            <DocUpload kind="photo" label="Profile photo" initialUrl={docUrls.photo} />
+            {profile.role === "broker" && (
+              <DocUpload kind="rera_cert" label="RERA certificate" initialUrl={docUrls.rera_cert} />
+            )}
           </div>
         </section>
       </div>
     </div>
-  );
-}
-
-function DocBox({ label }: { label: string }) {
-  return (
-    <label className="block aspect-[4/3] rounded-xl border-2 border-dashed border-ink-200 grid place-items-center text-center p-3 cursor-pointer hover:border-brand-300">
-      <input type="file" className="hidden" accept="image/*,.pdf" />
-      <span>
-        <p className="text-sm font-semibold">{label}</p>
-        <p className="text-xs text-ink-500 mt-1">PNG, JPG or PDF · max 5MB</p>
-      </span>
-    </label>
   );
 }

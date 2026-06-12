@@ -63,19 +63,6 @@ export default function SignupForm({
     setError(null);
     setSubmitting(true);
     try {
-      // ---- PAN verification BEFORE sending the OTP ----
-      const panRes = await fetch("/api/kyc/pan-precheck", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pan: form.pan, name: form.name }),
-      });
-      const panBody = await panRes.json().catch(() => ({}));
-      if (!panBody.ok || !panBody.valid) {
-        throw new Error(
-          errorMessage(panBody.error, "We couldn't verify that PAN. Please re-check and try again."),
-        );
-      }
-
       if (!recaptchaRef.current) {
         recaptchaRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container-signup", {
           size: "invisible",
@@ -279,7 +266,7 @@ export default function SignupForm({
         {error && <ErrorBox msg={error} />}
 
         <button className="btn-primary w-full" disabled={submitting}>
-          {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Verifying PAN…</> : <>Verify PAN &amp; send OTP <ArrowRight className="h-4 w-4" /></>}
+          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Send OTP <ArrowRight className="h-4 w-4" /></>}
         </button>
       </form>
     </>

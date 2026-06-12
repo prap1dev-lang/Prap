@@ -3,7 +3,6 @@ import { Coins, ArrowUpRight, Calendar, TrendingUp, Sparkles } from "lucide-reac
 import { buildMetadata } from "@/lib/seo";
 import { getSessionUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import AadhaarOtpCard from "@/components/kyc/AadhaarOtpCard";
 import ReferralCodeCard from "@/components/dashboard/ReferralCodeCard";
 
 export const metadata = buildMetadata({ title: "Dashboard", path: "/dashboard", noIndex: true });
@@ -20,6 +19,17 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
         .eq("id", me.authId)
         .maybeSingle()
     : { data: null as any };
+
+  // Aadhaar is verified by document upload (no UIDAI OTP). Check if one's on file.
+  const { data: aadhaarDoc } = me
+    ? await admin
+        .from("kyc_docs")
+        .select("id")
+        .eq("user_id", me.authId)
+        .eq("kind", "aadhaar")
+        .maybeSingle()
+    : { data: null as any };
+  const hasAadhaarDoc = !!aadhaarDoc;
 
   const role = (me?.role ?? (searchParams?.role as any) ?? "referrer") as "broker" | "corporate" | "referrer";
   const welcome = searchParams?.welcome === "1";
@@ -108,8 +118,16 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
         </section>
       )}
 
-      {row && !row.aadhaar_verified && (
-        <AadhaarOtpCard initiallyVerified={false} />
+      {me && !hasAadhaarDoc && (
+        <section className="card p-6 border-amber-200 bg-amber-50/40">
+          <p className="text-sm font-semibold text-amber-800">Aadhaar pending</p>
+          <p className="mt-1 text-sm text-ink-700">
+            Upload a clear photo or PDF of your Aadhaar card to complete your KYC.
+          </p>
+          <Link href="/dashboard/settings" className="btn-primary mt-4">
+            Upload Aadhaar <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </section>
       )}
 
       <section className="grid lg:grid-cols-2 gap-6">
