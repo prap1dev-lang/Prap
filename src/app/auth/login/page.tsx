@@ -74,8 +74,7 @@ export default function LoginPage() {
       });
       const body = await res.json();
       if (!res.ok || !body.ok || !body.session) {
-        const msg = typeof body.error === "string" ? body.error : "Sign in failed";
-        throw new Error(msg);
+        throw new Error(errorMessage(body.error, "Sign in failed"));
       }
 
       // Set the Supabase session directly — no magic-link redirect.
@@ -152,6 +151,20 @@ export default function LoginPage() {
       </p>
     </div>
   );
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    // Zod flatten: { formErrors: [], fieldErrors: { x: [msg] } }
+    const o = err as any;
+    const field = o.fieldErrors
+      ? Object.values(o.fieldErrors).flat().filter(Boolean).join(", ")
+      : "";
+    const form = Array.isArray(o.formErrors) ? o.formErrors.join(", ") : "";
+    return field || form || fallback;
+  }
+  return fallback;
 }
 
 function ErrorBox({ msg }: { msg: string }) {

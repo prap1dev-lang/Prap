@@ -1,11 +1,13 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
-import { CheckCircle2, XCircle, ExternalLink, ShieldCheck } from "lucide-react";
+import { deleteUserCompletely } from "@/lib/admin-users";
+import { CheckCircle2, XCircle, ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
 import ReraVerifyButton from "@/components/admin/ReraVerifyButton";
+import DeleteUserButton from "@/components/admin/DeleteUserButton";
 
 export const metadata = buildMetadata({ title: "User · Admin", path: "/admin/users", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -35,6 +37,17 @@ async function setStatus(formData: FormData) {
   revalidatePath(`/admin/users/${id}`);
   revalidatePath("/admin/users");
   revalidatePath("/admin");
+}
+
+async function deleteUser(formData: FormData) {
+  "use server";
+  await requireAdmin();
+  const id = String(formData.get("id"));
+  const res = await deleteUserCompletely(id);
+  if (!res.ok) return res;
+  revalidatePath("/admin/users");
+  revalidatePath("/admin");
+  redirect("/admin/users");
 }
 
 export default async function UserDetail({ params }: { params: { id: string } }) {
@@ -182,6 +195,21 @@ export default async function UserDetail({ params }: { params: { id: string } })
           </tbody>
         </table>
       </section>
+
+      {u.role !== "admin" && (
+        <section className="card p-6 border-rose-200">
+          <h2 className="font-bold flex items-center gap-2 text-rose-700">
+            <AlertTriangle className="h-5 w-5" /> Danger zone
+          </h2>
+          <p className="mt-2 text-sm text-ink-700">
+            Permanently remove this user and every related record — wallet, coin ledger,
+            bookings, KYC, payouts and their login. This cannot be undone.
+          </p>
+          <div className="mt-5">
+            <DeleteUserButton userId={u.id} userName={u.name} action={deleteUser} redirectTo="/admin/users" />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

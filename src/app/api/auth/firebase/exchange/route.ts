@@ -42,28 +42,67 @@ async function sha256Hex(s: string) {
     .join("");
 }
 
-/** Mint a Supabase session (access + refresh token) for an existing auth user. */
+type Admin = ReturnType<typeof supabaseAdmin>;
+
+/** Find a Supabase auth user id by email, paging through the directory. */
+async function findAuthUserIdByEmail(admin: Admin, email: string): Promise<string | null> {
+  const target = email.toLowerCase();
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) {
+      console.error("[exchange] listUsers failed:", error.message);
+      return null;
+    }
+    const hit = data?.users?.find((u) => (u.email || "").toLowerCase() === target);
+    if (hit) return hit.id;
+    if (!data?.users || data.users.length < 200) break; // last page
+  }
+  return null;
+}
+
+/**
+ * Mint a Supabase session (access + refresh token) for an existing auth user.
+ *
+ * We generate a magic-link token server-side (no email is sent) and exchange
+ * its `email_otp` for a real session via GoTrue's /verify endpoint. Using
+ * `type=magiclink` with the hashed_token can 401 depending on project email
+ * settings, so we verify with the plain `email_otp` + email pair, which is
+ * independent of SMTP/redirect configuration.
+ */
 async function mintSession(email: string) {
   const admin = supabaseAdmin();
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
   });
-  if (linkErr || !link?.properties?.hashed_token) {
+  if (linkErr || !link?.properties?.email_otp) {
     throw new Error(linkErr?.message || "Could not generate session token");
   }
 
-  // Exchange the hashed token for a real session via the GoTrue verify endpoint.
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const res = await fetch(`${base}/auth/v1/verify`, {
+
+  // Primary: verify the email_otp (config-independent).
+  let res = await fetch(`${base}/auth/v1/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: anon },
-    body: JSON.stringify({ type: "magiclink", token_hash: link.properties.hashed_token }),
+    body: JSON.stringify({ type: "email", email, token: link.properties.email_otp }),
   });
-  const session = await res.json();
+  let session = await res.json().catch(() => ({}));
+
+  // Fallback: hashed-token magic-link verify (older GoTrue behaviour).
+  if ((!res.ok || !session.access_token) && link.properties.hashed_token) {
+    res = await fetch(`${base}/auth/v1/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: anon },
+      body: JSON.stringify({ type: "magiclink", token_hash: link.properties.hashed_token }),
+    });
+    session = await res.json().catch(() => ({}));
+  }
+
   if (!res.ok || !session.access_token || !session.refresh_token) {
-    throw new Error(session?.msg || session?.error_description || "Could not establish session");
+    const detail = session?.msg || session?.error_description || session?.error || `HTTP ${res.status}`;
+    throw new Error(`Could not establish session: ${detail}`);
   }
   return {
     access_token: session.access_token as string,
@@ -109,12 +148,19 @@ export async function POST(req: Request) {
   if (created.data?.user) {
     authUserId = created.data.user.id;
   } else {
-    // Already exists — find it.
-    const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    authUserId = list?.users?.find((u) => u.email === syntheticEmail)?.id ?? null;
+    // Already exists (or a transient create error) — find the user by email,
+    // paging through the directory so this keeps working past 1000 accounts.
+    authUserId = await findAuthUserIdByEmail(admin, syntheticEmail);
   }
   if (!authUserId) {
-    return NextResponse.json({ ok: false, error: "Could not resolve account" }, { status: 500 });
+    console.error("[exchange] could not resolve auth user", {
+      syntheticEmail,
+      createError: created.error?.message,
+    });
+    return NextResponse.json(
+      { ok: false, error: created.error?.message || "Could not resolve account" },
+      { status: 500 },
+    );
   }
 
   // ---- 3. Profile row (signup) / existence check (login) ----

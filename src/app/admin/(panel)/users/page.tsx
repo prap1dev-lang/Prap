@@ -1,12 +1,25 @@
 import Link from "next/link";
+import { revalidatePath } from "next/cache";
 import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
+import { deleteUserCompletely } from "@/lib/admin-users";
+import DeleteUserButton from "@/components/admin/DeleteUserButton";
 
 export const metadata = buildMetadata({ title: "Users · Admin", path: "/admin/users", noIndex: true });
 export const dynamic = "force-dynamic";
 
 type SP = { q?: string; role?: string; status?: string };
+
+async function deleteUserAction(formData: FormData) {
+  "use server";
+  await requireAdmin();
+  const id = String(formData.get("id"));
+  const res = await deleteUserCompletely(id);
+  if (!res.ok) return res;
+  revalidatePath("/admin/users");
+  revalidatePath("/admin");
+}
 
 export default async function UsersPage({ searchParams }: { searchParams?: SP }) {
   await requireAdmin();
@@ -74,8 +87,13 @@ export default async function UsersPage({ searchParams }: { searchParams?: SP })
                 <td className="px-5 py-3">
                   <span className={`badge ${u.kyc_status === "verified" ? "!bg-emerald-50 !text-emerald-700" : u.kyc_status === "rejected" ? "!bg-rose-50 !text-rose-700" : "!bg-amber-50 !text-amber-700"}`}>{u.kyc_status}</span>
                 </td>
-                <td className="px-5 py-3 text-right">
-                  <Link href={`/admin/users/${u.id}`} className="btn-outline !py-1.5 !px-3 text-xs">View</Link>
+                <td className="px-5 py-3">
+                  <div className="flex items-center justify-end gap-2">
+                    <Link href={`/admin/users/${u.id}`} className="btn-outline !py-1.5 !px-3 text-xs">View</Link>
+                    {u.role !== "admin" && (
+                      <DeleteUserButton userId={u.id} userName={u.name} action={deleteUserAction} />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

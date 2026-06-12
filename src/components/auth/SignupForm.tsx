@@ -109,8 +109,7 @@ export default function SignupForm({
       });
       const body = await res.json();
       if (!res.ok || !body.ok || !body.session) {
-        const msg = typeof body.error === "string" ? body.error : "OTP verification failed";
-        throw new Error(msg);
+        throw new Error(errorMessage(body.error, "OTP verification failed"));
       }
 
       // Set the Supabase session directly — no magic-link redirect.
@@ -272,6 +271,19 @@ export default function SignupForm({
       </form>
     </>
   );
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const o = err as any;
+    const field = o.fieldErrors
+      ? Object.values(o.fieldErrors).flat().filter(Boolean).join(", ")
+      : "";
+    const form = Array.isArray(o.formErrors) ? o.formErrors.join(", ") : "";
+    return field || form || fallback;
+  }
+  return fallback;
 }
 
 function ErrorBox({ msg }: { msg: string }) {
