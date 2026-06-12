@@ -16,7 +16,7 @@ export default function Hero() {
 
       <div className="container min-h-[88vh] flex flex-col justify-center py-24 md:py-32">
         <Reveal className="max-w-3xl">
-          <span className="eyebrow">Property · Verified · Rewarded</span>
+          <span className="eyebrow">Property · Referral · Award · Program </span>
 
           <h1 className="h1 mt-7">
             Own a home that's been{" "}
