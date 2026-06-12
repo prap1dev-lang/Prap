@@ -54,7 +54,7 @@ const TAG_COLOR: Record<string, string> = {
 
 export default function BuyerServices() {
   return (
-    <section className="section bg-ink-50/50">
+    <section className="section bg-paper">
       <div className="container">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
           <div>

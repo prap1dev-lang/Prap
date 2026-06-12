@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Briefcase, Building2, UserRound, ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase-client";
 import { supabaseBrowser } from "@/lib/supabase";
+import { showAlert } from "@/components/ui/Alert";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -96,19 +97,19 @@ export default function SignupForm({
 
     // ---- Client-side validation BEFORE touching Firebase ----
     if (!isValidIndianMobile(form.phone)) {
-      setError("Enter a valid 10-digit mobile number (no leading 0 or +91).");
+      showAlert({ type: "warning", toast: true, title: "Check your phone number", text: "Enter a valid 10-digit Indian mobile (no leading 0 or +91)." });
       return;
     }
     if (!PAN_RE.test(form.pan)) {
-      setError("Enter a valid PAN (e.g. ABCDE1234F).");
+      showAlert({ type: "warning", toast: true, title: "Invalid PAN format", text: "Use the format ABCDE1234F (5 letters, 4 digits, 1 letter)." });
       return;
     }
     if (form.aadhaar.length !== 12) {
-      setError("Aadhaar must be exactly 12 digits.");
+      showAlert({ type: "warning", toast: true, title: "Aadhaar incomplete", text: "Aadhaar must be exactly 12 digits." });
       return;
     }
     if (form.password.length < 8) {
-      setError("Create a password of at least 8 characters.");
+      showAlert({ type: "warning", toast: true, title: "Password too short", text: "Create a password of at least 8 characters." });
       return;
     }
 
@@ -129,7 +130,7 @@ export default function SignupForm({
       confirmationRef.current = result;
       setStep("otp");
     } catch (e: any) {
-      setError(friendlyFirebaseError(e));
+      showAlert({ type: "error", title: "Couldn't send OTP", text: friendlyFirebaseError(e) });
       // Tear the verifier down so the next attempt starts clean.
       recaptchaRef.current?.clear();
       recaptchaRef.current = null;
@@ -163,7 +164,20 @@ export default function SignupForm({
       });
       const body = await res.json();
       if (!res.ok || !body.ok || !body.session) {
-        throw new Error(errorMessage(body.error, "OTP verification failed"));
+        const msg = errorMessage(body.error, "OTP verification failed");
+        // Duplicate account → an account already exists for this phone/PAN/email.
+        if (res.status === 409 || /already exists|already in use|already an account/i.test(msg)) {
+          showAlert({
+            type: "warning",
+            title: "Account already exists",
+            text: "These details (phone, PAN or email) are already registered. Please sign in instead.",
+            confirmText: "Go to sign in",
+            onConfirm: () => (window.location.href = "/auth/login"),
+          });
+          resetToForm("");
+          return;
+        }
+        throw new Error(msg);
       }
 
       // Set the Supabase session directly — no magic-link redirect.
@@ -180,15 +194,16 @@ export default function SignupForm({
         code === "auth/session-expired" ||
         /expired|recaptcha/i.test(String(e?.message))
       ) {
-        resetToForm("Your code expired. Please request a new OTP.");
+        showAlert({ type: "warning", toast: true, title: "Code expired", text: "Please request a fresh OTP." });
+        resetToForm("");
         return;
       }
       if (code === "auth/invalid-verification-code") {
-        setError("That OTP is incorrect. Please re-enter the 6-digit code.");
+        showAlert({ type: "error", toast: true, title: "Incorrect OTP", text: "Please re-enter the 6-digit code." });
         setSubmitting(false);
         return;
       }
-      setError(friendlyFirebaseError(e));
+      showAlert({ type: "error", title: "Something went wrong", text: friendlyFirebaseError(e) });
       setSubmitting(false);
     }
   }

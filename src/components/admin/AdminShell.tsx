@@ -113,20 +113,20 @@ function Sidebar({
       <aside
         className={[
           // Mobile: fixed slide-in drawer
-          "fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-ink-950 text-ink-100 border-r border-ink-900",
-          "flex flex-col p-5",
-          "transition-transform duration-200 ease-out",
+          "fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-ink-950 text-ink-100",
+          "flex flex-col p-5 relative overflow-hidden",
+          "transition-transform duration-300 ease-out",
           open ? "translate-x-0" : "-translate-x-full",
           "lg:translate-x-0", // always visible on desktop
         ].join(" ")}
       >
+        {/* subtle mesh glow at the top of the sidebar */}
+        <div className="pointer-events-none absolute -top-24 -left-10 h-56 w-56 rounded-full bg-brand-600/25 blur-3xl" />
         {/* Header row */}
-        <div className="flex items-center justify-between gap-2">
-          <Link href="/admin" className="flex items-center gap-2 font-extrabold text-white">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600">
-              <Coins className="h-5 w-5" />
-            </span>
-            <span>PRAP <span className="text-brand-400">·</span> Admin</span>
+        <div className="relative z-10 flex items-center justify-between gap-2">
+          <Link href="/admin" className="font-serif text-lg tracking-tight text-white">
+            PRAP<span className="text-brand-400">.</span>{" "}
+            <span className="text-xs uppercase tracking-[0.2em] text-ink-300 font-sans">Admin</span>
           </Link>
           <button
             onClick={onClose}
@@ -138,7 +138,7 @@ function Sidebar({
         </div>
 
         {/* Nav */}
-        <nav className="mt-8 flex-1 overflow-y-auto -mx-1 px-1 space-y-1">
+        <nav className="relative z-10 mt-8 flex-1 overflow-y-auto -mx-1 px-1 space-y-1">
           {nav.map((n) => {
             const active = isActive(pathname, n.href);
             return (

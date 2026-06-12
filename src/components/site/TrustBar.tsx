@@ -7,12 +7,12 @@ const items = [
 
 export default function TrustBar() {
   return (
-    <section className="border-y border-ink-100 bg-white">
-      <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+    <section className="bg-white">
+      <div className="container py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
         {items.map((i) => (
           <div key={i.v}>
-            <p className="text-2xl md:text-3xl font-extrabold text-ink-900">{i.k}</p>
-            <p className="text-sm text-ink-500">{i.v}</p>
+            <p className="font-serif text-3xl md:text-4xl font-light text-ink-900">{i.k}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.12em] text-ink-500">{i.v}</p>
           </div>
         ))}
       </div>

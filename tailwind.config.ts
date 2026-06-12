@@ -40,27 +40,65 @@ const config: Config = {
         },
         beige:    "#F5F5DC",
         offwhite: "#FAFAF8",
+        ivory:    "#FBFAF7",
+        paper:    "#F6F5F1",
         // Ink (neutral text/borders) — slightly warmed for nature theme
         ink: {
           50:  "#f6f6f1",
           100: "#ecece4",
           200: "#d8d8cc",
+          300: "#b9bbae",
+          400: "#8e9184",
           500: "#6b6f63",
+          600: "#52564b",
           700: "#3a3f36",
+          800: "#262a22",
           900: "#1a1f18",
           950: "#0e1310",
         },
       },
       fontFamily: {
-        sans: ["ui-sans-serif", "system-ui", "Segoe UI", "Inter", "Roboto", "Helvetica Neue", "Arial"],
-        display: ["ui-sans-serif", "Inter", "Segoe UI", "system-ui"],
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "Segoe UI", "Inter", "Arial"],
+        serif: ["var(--font-serif)", "ui-serif", "Georgia", "Cambria", "serif"],
+        display: ["var(--font-serif)", "ui-serif", "Georgia", "serif"],
+      },
+      borderRadius: {
+        "2xl": "1.25rem", // 20px
+        "3xl": "1.5rem",  // 24px
+        "4xl": "2rem",    // 32px
       },
       boxShadow: {
-        card: "0 1px 2px 0 rgba(27,67,50,0.04), 0 4px 16px -4px rgba(27,67,50,0.10)",
+        // Incredibly soft, blurry drop shadows — no hard edges
+        card: "0 2px 8px -2px rgba(27,67,50,0.05), 0 12px 32px -12px rgba(27,67,50,0.10)",
+        soft: "0 8px 40px -12px rgba(27,67,50,0.12)",
+        glow: "0 0 0 1px rgba(255,255,255,0.5) inset, 0 20px 60px -20px rgba(27,67,50,0.20)",
+        "inner-glow": "inset 0 1px 0 0 rgba(255,255,255,0.6)",
       },
       backgroundImage: {
         "grid-fade":
-          "radial-gradient(ellipse at top, rgba(27,67,50,0.10), transparent 60%), radial-gradient(ellipse at bottom right, rgba(163,177,138,0.18), transparent 60%)",
+          "radial-gradient(ellipse at top, rgba(27,67,50,0.08), transparent 60%), radial-gradient(ellipse at bottom right, rgba(163,177,138,0.16), transparent 60%)",
+        "mesh":
+          "radial-gradient(at 18% 22%, rgba(88,129,87,0.28) 0px, transparent 50%), radial-gradient(at 82% 18%, rgba(163,177,138,0.30) 0px, transparent 50%), radial-gradient(at 28% 82%, rgba(27,67,50,0.22) 0px, transparent 50%), radial-gradient(at 75% 78%, rgba(196,211,168,0.30) 0px, transparent 50%)",
+      },
+      keyframes: {
+        meshShift: {
+          "0%,100%": { transform: "translate3d(0,0,0) scale(1)" },
+          "33%": { transform: "translate3d(2%,-2%,0) scale(1.05)" },
+          "66%": { transform: "translate3d(-2%,1%,0) scale(1.02)" },
+        },
+        floatY: {
+          "0%,100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        revealUp: {
+          from: { opacity: "0", transform: "translateY(16px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        mesh: "meshShift 22s ease-in-out infinite",
+        floaty: "floatY 6s ease-in-out infinite",
+        reveal: "revealUp 0.7s cubic-bezier(0.22,1,0.36,1) both",
       },
     },
   },

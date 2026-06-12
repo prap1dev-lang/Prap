@@ -29,7 +29,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="section bg-ink-50/50">
+    <section className="section bg-paper">
       <div className="container">
         <div className="max-w-2xl">
           <span className="eyebrow">How PRAP works</span>

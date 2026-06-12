@@ -7,81 +7,160 @@
   --sage:  163 177 138;  /* Sage Green   #A3B18A */
   --beige: 245 245 220;  /* Beige        #F5F5DC */
   --ink:   26 31 24;
+  color-scheme: light;
 }
 
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Kinetic / overscroll styling */
+  overscroll-behavior-y: none;
 }
 
 body {
-  @apply bg-offwhite text-ink-900 font-sans;
+  @apply bg-ivory text-ink-900 font-sans antialiased;
+  letter-spacing: -0.01em;
+}
+
+/* Luxury serif headings with subtle tracking scale */
+h1, h2, h3, .font-serif {
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
 }
 
 @layer components {
+  /* ---------------- Buttons: minimalist, pill, soft ---------------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium tracking-wide
+           transition-all duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           focus-visible:ring-brand-400/50 disabled:opacity-50 disabled:pointer-events-none
+           active:scale-[0.98];
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-card focus:ring-brand-500;
+    @apply btn bg-brand-600 text-ivory shadow-soft hover:bg-brand-700 hover:shadow-glow hover:-translate-y-0.5;
   }
   .btn-secondary {
-    @apply btn bg-ink-900 text-white hover:bg-ink-700 focus:ring-ink-700;
+    @apply btn bg-ink-900 text-ivory hover:bg-ink-700;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-ink-900 hover:bg-ink-100 focus:ring-ink-200;
+    @apply btn bg-transparent text-ink-900 hover:bg-ink-900/5;
   }
+  /* Elegant minimal outline — thin border, generous padding, gentle hover */
   .btn-outline {
-    @apply btn border border-ink-200 bg-white text-ink-900 hover:bg-ink-50 focus:ring-ink-200;
+    @apply btn border border-ink-900/15 bg-transparent text-ink-900 hover:border-brand-600/40 hover:bg-brand-50/40;
   }
+  /* Text-only button with elegant underline-on-hover */
+  .btn-link {
+    @apply inline-flex items-center gap-1.5 text-sm font-medium text-ink-900 relative
+           after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-0 after:bg-current
+           after:transition-all after:duration-300 hover:after:w-full;
+  }
+
+  /* ---------------- Cards: borderless, ivory, soft shadow ---------------- */
   .card {
-    @apply bg-white rounded-2xl shadow-card border border-ink-100;
+    @apply bg-white rounded-3xl shadow-card;
   }
+  .card-ivory {
+    @apply bg-ivory rounded-3xl;
+  }
+  /* Glassmorphism surface */
+  .glass {
+    @apply rounded-3xl border border-white/40 bg-white/60 backdrop-blur-xl backdrop-saturate-150 shadow-soft;
+  }
+  .glass-dark {
+    @apply rounded-3xl border border-white/10 bg-ink-950/50 backdrop-blur-xl text-ivory;
+  }
+
+  /* ---------------- Inputs: sophisticated dynamic focus rings ---------------- */
   .input {
-    @apply w-full rounded-xl border border-ink-200 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition;
+    @apply w-full rounded-2xl border border-ink-900/10 bg-white/80 px-4 py-3 text-ink-900
+           placeholder:text-ink-500/70 transition-all duration-300
+           focus:outline-none focus:border-brand-500/60 focus:ring-4 focus:ring-brand-500/10 focus:bg-white;
   }
   .label {
-    @apply block text-sm font-medium text-ink-700 mb-1.5;
+    @apply block text-xs font-medium uppercase tracking-wider text-ink-500 mb-2;
   }
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 px-2.5 py-1 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 px-3 py-1 text-xs font-medium;
   }
-  /* Any .card that wraps a wide <table> scrolls horizontally on small screens
-     instead of breaking the layout. Admin tables rely on this. */
+
+  /* Wide tables inside cards scroll horizontally on small screens */
   .card:has(> table),
-  .card:has(> form > table) {
-    @apply overflow-x-auto;
-  }
+  .card:has(> form > table) { @apply overflow-x-auto; }
   .card > table,
-  .card > form > table {
-    @apply min-w-[640px];
-  }
-  .section {
-    @apply py-16 md:py-24;
-  }
+  .card > form > table { @apply min-w-[640px]; }
+
+  /* ---------------- Layout primitives ---------------- */
+  .section { @apply py-20 md:py-28; }
   .h1 {
-    @apply text-4xl md:text-6xl font-extrabold tracking-tight text-ink-900;
+    @apply font-serif text-[2.6rem] leading-[1.05] md:text-7xl font-light tracking-[-0.02em] text-ink-900;
   }
   .h2 {
-    @apply text-3xl md:text-4xl font-bold tracking-tight text-ink-900;
+    @apply font-serif text-3xl md:text-5xl font-light tracking-[-0.015em] text-ink-900;
   }
   .eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand-700;
+    @apply inline-flex items-center gap-2 text-[0.7rem] font-medium uppercase tracking-[0.2em] text-brand-600/80;
   }
+
+  /* Editorial lists: zero bullets, content-visibility for long lists */
+  .editorial-list { list-style: none; padding: 0; }
+  .editorial-list > li { content-visibility: auto; contain-intrinsic-size: auto 48px; }
+}
+
+@layer utilities {
+  /* Luxury text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #1B4332 0%, #588157 55%, #A3B18A 100%);
+  }
+  /* Animated Stripe-style mesh gradient backdrop */
+  .mesh-bg { @apply bg-mesh animate-mesh; background-size: 180% 180%; }
+
+  /* Non-destructive micro-scale on hover (premium imagery) */
+  .hover-scale { @apply transition-transform duration-700 ease-out will-change-transform; }
+  .group:hover .hover-scale { transform: scale(1.04); }
+
+  /* Tracking scale — luxury branding trick */
+  .tracking-luxe { letter-spacing: 0.18em; }
+}
+
+/* Scroll-reveal: elements fade up when revealed via IntersectionObserver */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .animate-mesh, .animate-floaty { animation: none !important; }
 }
 
 ::selection {
-  background: rgba(27, 67, 50, 0.18);
+  background: rgba(27, 67, 50, 0.16);
   color: #1B4332;
 }
 
-/* Hide the floating Google reCAPTCHA badge.
-   Firebase phone-auth still runs the invisible reCAPTCHA challenge — only the
-   badge UI is hidden. reCAPTCHA branding is disclosed on /privacy instead. */
-.grecaptcha-badge {
-  visibility: hidden !important;
+/* Soft, custom scrollbar for the kinetic feel */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(27, 67, 50, 0.25) transparent;
 }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(27, 67, 50, 0.22);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(27, 67, 50, 0.4); background-clip: content-box; }
+
+/* Hide the floating Google reCAPTCHA badge (challenge still runs invisibly). */
+.grecaptcha-badge { visibility: hidden !important; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }

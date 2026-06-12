@@ -10,25 +10,25 @@ export default function EmiCalculator() {
   const [tab, setTab] = useState<Tab>("emi");
 
   return (
-    <section className="section bg-ink-50">
+    <section className="section bg-paper">
       <div className="container">
         <div className="text-center max-w-2xl mx-auto">
-          <span className="eyebrow"><Calculator className="h-3.5 w-3.5" /> Home-loan tools</span>
-          <h2 className="h2 mt-4">Plan your home loan with confidence.</h2>
-          <p className="mt-4 text-ink-700 text-lg">
-            Estimate your monthly EMI or find out how much loan you qualify for — instantly,
-            with transparent, bank-standard math.
+          <span className="eyebrow">Home-loan tools</span>
+          <h2 className="h2 mt-4">Plan your loan,<br />calmly &amp; clearly.</h2>
+          <p className="mt-5 text-ink-600 text-lg font-light">
+            Estimate your monthly EMI or discover how much you qualify for —
+            instant, transparent, bank-standard math.
           </p>
         </div>
 
-        <div className="mt-8 flex justify-center">
-          <div className="inline-flex rounded-full bg-white border border-ink-200 p-1 shadow-card">
+        <div className="mt-10 flex justify-center">
+          <div className="inline-flex rounded-full bg-white/70 backdrop-blur-md p-1 shadow-card">
             <TabBtn active={tab === "emi"} onClick={() => setTab("emi")}>EMI calculator</TabBtn>
             <TabBtn active={tab === "eligibility"} onClick={() => setTab("eligibility")}>Loan eligibility</TabBtn>
           </div>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-10">
           {tab === "emi" ? <EmiPanel /> : <EligibilityPanel />}
         </div>
       </div>
@@ -41,8 +41,8 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-        active ? "bg-brand-600 text-white shadow-card" : "text-ink-600 hover:text-ink-900"
+      className={`rounded-full px-6 py-2.5 text-sm font-medium tracking-wide transition-all duration-300 ${
+        active ? "bg-brand-600 text-ivory shadow-soft" : "text-ink-500 hover:text-ink-900"
       }`}
     >
       {children}
@@ -101,8 +101,8 @@ function EmiPanel() {
       </div>
 
       <div className="card p-7 flex flex-col">
-        <p className="text-xs uppercase tracking-wider font-semibold text-ink-500">Monthly EMI</p>
-        <p className="mt-1 text-4xl md:text-5xl font-extrabold text-brand-700">{formatINR(r.emi)}</p>
+        <p className="text-[0.7rem] uppercase tracking-[0.2em] text-ink-500">Monthly EMI</p>
+        <p className="mt-2 font-serif text-5xl md:text-6xl font-light text-gradient">{formatINR(r.emi)}</p>
 
         <div className="mt-7">
           <Bar interestPct={interestPct} />
@@ -145,8 +145,8 @@ function EligibilityPanel() {
       </div>
 
       <div className="card p-7 flex flex-col">
-        <p className="text-xs uppercase tracking-wider font-semibold text-ink-500">You may be eligible for</p>
-        <p className="mt-1 text-4xl md:text-5xl font-extrabold text-brand-700">{formatINRCompact(r.eligibleLoan)}</p>
+        <p className="text-[0.7rem] uppercase tracking-[0.2em] text-ink-500">You may be eligible for</p>
+        <p className="mt-2 font-serif text-5xl md:text-6xl font-light text-gradient">{formatINRCompact(r.eligibleLoan)}</p>
         <p className="mt-1 text-sm text-ink-500">{formatINR(r.eligibleLoan)}</p>
 
         <div className="mt-auto pt-7 grid grid-cols-2 gap-4 text-sm">

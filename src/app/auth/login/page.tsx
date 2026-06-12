@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase-client";
 import { supabaseBrowser } from "@/lib/supabase";
+import { showAlert } from "@/components/ui/Alert";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -68,7 +69,7 @@ export default function LoginPage() {
       if (sessErr) throw sessErr;
       window.location.href = "/dashboard";
     } catch (e: any) {
-      setError(e?.message || "Sign in failed");
+      showAlert({ type: "error", toast: true, title: "Sign in failed", text: e?.message || "Incorrect phone or password." });
       setLoading(false);
     }
   }

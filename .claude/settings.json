@@ -19,7 +19,14 @@
       "Bash(git add *)",
       "Bash(git restore *)",
       "Bash(git commit -m 'Wire referral & visit-credit system end-to-end *)",
-      "Bash(grep -rn \"TODO\\\\|return NextResponse.json\\({ ok: true, bookings: \\\\[\\\\] }\\)\\\\|B-DEMO\\\\|not yet\\\\|TODO:\" src --include=\"*.ts\")"
+      "Bash(grep -rn \"TODO\\\\|return NextResponse.json\\({ ok: true, bookings: \\\\[\\\\] }\\)\\\\|B-DEMO\\\\|not yet\\\\|TODO:\" src --include=\"*.ts\")",
+      "Bash(grep -iE \"error|failed|Compiled successfully|api/me|/$\")",
+      "Bash(echo \"exit=$?\")",
+      "PowerShell(\"cleaned\")",
+      "Bash(npx next *)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }
