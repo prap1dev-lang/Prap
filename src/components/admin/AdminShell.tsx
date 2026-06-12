@@ -52,7 +52,7 @@ export default function AdminShell({
     nav.find((n) => isActive(pathname || "", n.href))?.label ?? "Admin";
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr] bg-ink-50">
+    <div className="min-h-screen lg:h-screen lg:grid lg:grid-cols-[260px_1fr] lg:overflow-hidden bg-ink-50">
       {/* ===== Mobile topbar ===== */}
       <header className="lg:hidden sticky top-0 z-30 bg-ink-950 text-white border-b border-ink-900">
         <div className="flex items-center justify-between px-4 h-14">
@@ -76,8 +76,8 @@ export default function AdminShell({
       {/* ===== Sidebar (desktop static, mobile drawer) ===== */}
       <Sidebar open={open} onClose={() => setOpen(false)} email={email} pathname={pathname || ""} />
 
-      {/* ===== Main content ===== */}
-      <main className="px-4 py-5 md:p-8 max-w-full overflow-x-auto">
+      {/* ===== Main content (independent scroll on desktop) ===== */}
+      <main className="px-4 py-5 md:p-8 max-w-full lg:h-screen lg:overflow-y-auto overflow-x-auto">
         {children}
       </main>
     </div>

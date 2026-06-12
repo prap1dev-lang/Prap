@@ -11,17 +11,48 @@ import {
 
 type Role = "broker" | "corporate" | "referrer";
 
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+/** Map Firebase auth error codes to clear, user-facing messages. */
+function friendlyFirebaseError(e: any): string {
+  switch (e?.code) {
+    case "auth/invalid-phone-number":
+      return "That phone number isn't valid. Enter a 10-digit Indian mobile.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a few minutes and try again.";
+    case "auth/quota-exceeded":
+      return "OTP service is busy right now. Please try again shortly.";
+    case "auth/code-expired":
+    case "auth/session-expired":
+      return "Your code expired. Please request a new OTP.";
+    case "auth/captcha-check-failed":
+      return "Verification failed. Please try again.";
+    default:
+      return e?.message?.replace(/^Firebase:\s*/, "") || "Failed to send OTP";
+  }
+}
+
 const roles: { id: Role; title: string; icon: React.ComponentType<any>; subtitle: string }[] = [
   { id: "broker", title: "Broker", icon: Briefcase, subtitle: "Channel Partner / Agent" },
   { id: "corporate", title: "Corporate", icon: Building2, subtitle: "HR / Employer" },
   { id: "referrer", title: "Referrer", icon: UserRound, subtitle: "Buyer / Investor" },
 ];
 
+/** Extract the 10-digit Indian mobile number, dropping +91 / 0 prefixes. */
+function tenDigits(p: string): string {
+  let d = p.replace(/\D/g, ""); // keep digits only
+  if (d.startsWith("91") && d.length === 12) d = d.slice(2); // +91XXXXXXXXXX
+  if (d.startsWith("0") && d.length === 11) d = d.slice(1); // 0XXXXXXXXXX
+  return d;
+}
+
+/** True only for a valid 10-digit Indian mobile (starts 6–9). */
+function isValidIndianMobile(p: string): boolean {
+  return /^[6-9]\d{9}$/.test(tenDigits(p));
+}
+
 function normalizePhone(p: string) {
-  const trimmed = p.replace(/\s|-/g, "");
-  if (trimmed.startsWith("+")) return trimmed;
-  if (trimmed.length === 10) return `+91${trimmed}`;
-  return `+${trimmed.replace(/^\+/, "")}`;
+  return `+91${tenDigits(p)}`;
 }
 
 export default function SignupForm({
@@ -61,13 +92,30 @@ export default function SignupForm({
   async function requestOtp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    // ---- Client-side validation BEFORE touching Firebase ----
+    if (!isValidIndianMobile(form.phone)) {
+      setError("Enter a valid 10-digit mobile number (no leading 0 or +91).");
+      return;
+    }
+    if (!PAN_RE.test(form.pan)) {
+      setError("Enter a valid PAN (e.g. ABCDE1234F).");
+      return;
+    }
+    if (form.aadhaar.length !== 12) {
+      setError("Aadhaar must be exactly 12 digits.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      if (!recaptchaRef.current) {
-        recaptchaRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container-signup", {
-          size: "invisible",
-        });
-      }
+      // Always rebuild a fresh invisible reCAPTCHA — a stale/expired verifier
+      // is the usual cause of "reCAPTCHA has already been rendered / expired".
+      recaptchaRef.current?.clear();
+      recaptchaRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container-signup", {
+        size: "invisible",
+      });
+
       const result = await signInWithPhoneNumber(
         firebaseAuth,
         normalizePhone(form.phone),
@@ -76,7 +124,8 @@ export default function SignupForm({
       confirmationRef.current = result;
       setStep("otp");
     } catch (e: any) {
-      setError(e?.message || "Failed to send OTP");
+      setError(friendlyFirebaseError(e));
+      // Tear the verifier down so the next attempt starts clean.
       recaptchaRef.current?.clear();
       recaptchaRef.current = null;
     } finally {
@@ -89,7 +138,10 @@ export default function SignupForm({
     setError(null);
     setSubmitting(true);
     try {
-      if (!confirmationRef.current) throw new Error("Session expired. Please resend OTP.");
+      if (!confirmationRef.current) {
+        resetToForm("Your code expired. Please request a new OTP.");
+        return;
+      }
       const credential = await confirmationRef.current.confirm(otp);
       const idToken = await credential.user.getIdToken();
 
@@ -115,9 +167,36 @@ export default function SignupForm({
 
       window.location.href = `/dashboard?role=${role}&welcome=1`;
     } catch (e: any) {
-      setError(e?.message || "OTP verification failed");
+      const code = e?.code || "";
+      // Expired session / expired-or-stale reCAPTCHA → bounce back to the form
+      // with a fresh verifier so the user can re-request a code cleanly.
+      if (
+        code === "auth/code-expired" ||
+        code === "auth/session-expired" ||
+        /expired|recaptcha/i.test(String(e?.message))
+      ) {
+        resetToForm("Your code expired. Please request a new OTP.");
+        return;
+      }
+      if (code === "auth/invalid-verification-code") {
+        setError("That OTP is incorrect. Please re-enter the 6-digit code.");
+        setSubmitting(false);
+        return;
+      }
+      setError(friendlyFirebaseError(e));
       setSubmitting(false);
     }
+  }
+
+  /** Reset OTP state and return to the form so the user can retry from scratch. */
+  function resetToForm(msg: string) {
+    recaptchaRef.current?.clear();
+    recaptchaRef.current = null;
+    confirmationRef.current = null;
+    setOtp("");
+    setSubmitting(false);
+    setStep("form");
+    setError(msg);
   }
 
   async function resendOtp() {
@@ -133,8 +212,11 @@ export default function SignupForm({
         recaptchaRef.current,
       );
       confirmationRef.current = result;
+      setOtp("");
     } catch (e: any) {
-      setError(e?.message || "Resend failed");
+      setError(friendlyFirebaseError(e));
+      recaptchaRef.current?.clear();
+      recaptchaRef.current = null;
     }
   }
 
@@ -206,14 +288,28 @@ export default function SignupForm({
 
         <div>
           <label className="label">Phone <span className="text-xs text-ink-500 font-normal">— we'll SMS your OTP here</span></label>
-          <input
-            className="input"
-            required
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            placeholder="98XXXXXXXX"
-            inputMode="tel"
-          />
+          <div className="flex">
+            <span className="inline-flex items-center rounded-l-xl border border-r-0 border-ink-200 bg-ink-50 px-3 text-sm font-semibold text-ink-700">
+              +91
+            </span>
+            <input
+              className="input !rounded-l-none"
+              required
+              value={form.phone}
+              onChange={(e) => {
+                // digits only, drop a leading 0, cap at 10
+                let d = e.target.value.replace(/\D/g, "");
+                if (d.startsWith("0")) d = d.slice(1);
+                setForm({ ...form, phone: d.slice(0, 10) });
+              }}
+              placeholder="98XXXXXXXX"
+              inputMode="numeric"
+              maxLength={10}
+            />
+          </div>
+          {form.phone.length > 0 && !isValidIndianMobile(form.phone) && (
+            <p className="text-xs text-rose-600 mt-1">Enter a 10-digit number starting 6–9 (no 0 or +91).</p>
+          )}
         </div>
 
         <div>
@@ -224,7 +320,17 @@ export default function SignupForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">PAN</label>
-            <input className="input uppercase" required maxLength={10} value={form.pan} onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" />
+            <input
+              className="input uppercase"
+              required
+              maxLength={10}
+              value={form.pan}
+              onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })}
+              placeholder="ABCDE1234F"
+            />
+            {form.pan.length > 0 && !PAN_RE.test(form.pan) && (
+              <p className="text-xs text-rose-600 mt-1">Format: 5 letters, 4 digits, 1 letter.</p>
+            )}
           </div>
           <div>
             <label className="label">Aadhaar (12 digits)</label>

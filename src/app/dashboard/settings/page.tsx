@@ -56,10 +56,23 @@ export default async function SettingsPage() {
           <h2 className="font-bold">KYC documents</h2>
           <p className="mt-1 text-sm text-ink-500">
             Upload clear photos or PDFs. Files are stored securely and reviewed by our team.
+            Each file must be under 2&nbsp;MB.
           </p>
-          <div className="mt-4 grid sm:grid-cols-3 gap-4">
-            <DocUpload kind="aadhaar" label="Aadhaar card" initialUrl={docUrls.aadhaar} />
-            <DocUpload kind="pan" label="PAN card" initialUrl={docUrls.pan} />
+
+          <h3 className="mt-5 text-sm font-semibold text-ink-700">Aadhaar card</h3>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <DocUpload kind="aadhaar_front" label="Aadhaar — Front" initialUrl={docUrls.aadhaar_front ?? docUrls.aadhaar} />
+            <DocUpload kind="aadhaar_back" label="Aadhaar — Back" initialUrl={docUrls.aadhaar_back} />
+          </div>
+
+          <h3 className="mt-6 text-sm font-semibold text-ink-700">PAN card</h3>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <DocUpload kind="pan_front" label="PAN — Front" initialUrl={docUrls.pan_front ?? docUrls.pan} />
+            <DocUpload kind="pan_back" label="PAN — Back" initialUrl={docUrls.pan_back} />
+          </div>
+
+          <h3 className="mt-6 text-sm font-semibold text-ink-700">Other</h3>
+          <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
             <DocUpload kind="photo" label="Profile photo" initialUrl={docUrls.photo} />
             {profile.role === "broker" && (
               <DocUpload kind="rera_cert" label="RERA certificate" initialUrl={docUrls.rera_cert} />

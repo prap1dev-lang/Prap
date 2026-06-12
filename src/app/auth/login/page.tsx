@@ -10,11 +10,19 @@ import {
   ConfirmationResult,
 } from "firebase/auth";
 
+function tenDigits(p: string): string {
+  let d = p.replace(/\D/g, "");
+  if (d.startsWith("91") && d.length === 12) d = d.slice(2);
+  if (d.startsWith("0") && d.length === 11) d = d.slice(1);
+  return d;
+}
+
+function isValidIndianMobile(p: string): boolean {
+  return /^[6-9]\d{9}$/.test(tenDigits(p));
+}
+
 function normalizePhone(p: string) {
-  const trimmed = p.replace(/\s|-/g, "");
-  if (trimmed.startsWith("+")) return trimmed;
-  if (trimmed.length === 10) return `+91${trimmed}`;
-  return `+${trimmed.replace(/^\+/, "")}`;
+  return `+91${tenDigits(p)}`;
 }
 
 export default function LoginPage() {
@@ -35,13 +43,17 @@ export default function LoginPage() {
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!isValidIndianMobile(phone)) {
+      setError("Enter a valid 10-digit mobile number (no leading 0 or +91).");
+      return;
+    }
     setLoading(true);
     try {
-      if (!recaptchaRef.current) {
-        recaptchaRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container", {
-          size: "invisible",
-        });
-      }
+      // Rebuild a fresh invisible reCAPTCHA each attempt to avoid stale/expired verifier errors.
+      recaptchaRef.current?.clear();
+      recaptchaRef.current = new RecaptchaVerifier(firebaseAuth, "recaptcha-container", {
+        size: "invisible",
+      });
       const result = await signInWithPhoneNumber(
         firebaseAuth,
         normalizePhone(phone),
@@ -50,7 +62,7 @@ export default function LoginPage() {
       confirmationRef.current = result;
       setStep("otp");
     } catch (e: any) {
-      setError(e?.message || "Failed to send OTP");
+      setError((e?.message || "Failed to send OTP").replace(/^Firebase:\s*/, ""));
       recaptchaRef.current?.clear();
       recaptchaRef.current = null;
     } finally {
@@ -58,12 +70,25 @@ export default function LoginPage() {
     }
   }
 
+  function resetToPhone(msg: string) {
+    recaptchaRef.current?.clear();
+    recaptchaRef.current = null;
+    confirmationRef.current = null;
+    setOtp("");
+    setLoading(false);
+    setStep("phone");
+    setError(msg);
+  }
+
   async function verify(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      if (!confirmationRef.current) throw new Error("Session expired. Please resend OTP.");
+      if (!confirmationRef.current) {
+        resetToPhone("Your code expired. Please request a new OTP.");
+        return;
+      }
       const credential = await confirmationRef.current.confirm(otp);
       const idToken = await credential.user.getIdToken();
 
@@ -83,7 +108,17 @@ export default function LoginPage() {
 
       window.location.href = "/dashboard";
     } catch (e: any) {
-      setError(e?.message || "Invalid OTP");
+      const code = e?.code || "";
+      if (code === "auth/code-expired" || code === "auth/session-expired" || /expired|recaptcha/i.test(String(e?.message))) {
+        resetToPhone("Your code expired. Please request a new OTP.");
+        return;
+      }
+      if (code === "auth/invalid-verification-code") {
+        setError("That OTP is incorrect. Please re-enter the 6-digit code.");
+        setLoading(false);
+        return;
+      }
+      setError((e?.message || "Invalid OTP").replace(/^Firebase:\s*/, ""));
       setLoading(false);
     }
   }
@@ -100,15 +135,27 @@ export default function LoginPage() {
         <form onSubmit={sendOtp} className="mt-6 space-y-4">
           <div>
             <label className="label">Phone number</label>
-            <input
-              className="input"
-              type="tel"
-              inputMode="numeric"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="98XXXXXXXX"
-            />
+            <div className="flex">
+              <span className="inline-flex items-center rounded-l-xl border border-r-0 border-ink-200 bg-ink-50 px-3 text-sm font-semibold text-ink-700">
+                +91
+              </span>
+              <input
+                className="input !rounded-l-none"
+                inputMode="numeric"
+                required
+                value={phone}
+                onChange={(e) => {
+                  let d = e.target.value.replace(/\D/g, "");
+                  if (d.startsWith("0")) d = d.slice(1);
+                  setPhone(d.slice(0, 10));
+                }}
+                placeholder="98XXXXXXXX"
+                maxLength={10}
+              />
+            </div>
+            {phone.length > 0 && !isValidIndianMobile(phone) && (
+              <p className="text-xs text-rose-600 mt-1">Enter a 10-digit number starting 6–9.</p>
+            )}
           </div>
           {error && <ErrorBox msg={error} />}
           <button className="btn-primary w-full" disabled={loading}>

@@ -29,19 +29,25 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
     bank_account: initial.bank_account ?? "",
     bank_ifsc: initial.bank_ifsc ?? "",
   });
-  const [personal, setPersonal] = useState<Status>({ kind: "idle" });
-  const [payout, setPayout] = useState<Status>({ kind: "idle" });
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   function set<K extends keyof typeof form>(k: K, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
-  async function save(
-    fields: Partial<typeof form>,
-    setStatus: (s: Status) => void,
-  ) {
+  // One Save for the whole form — personal details + payout details together.
+  async function saveAll() {
     setStatus({ kind: "saving" });
     try {
+      const fields: Record<string, string> = {
+        name: form.name,
+        email: form.email,
+        upi_id: form.upi_id,
+        bank_account: form.bank_account,
+        bank_ifsc: form.bank_ifsc,
+      };
+      if (initial.role === "broker") fields.rera_number = form.rera_number;
+
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -103,23 +109,6 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
             </Field>
           )}
         </div>
-        <StatusRow status={personal} />
-        <button
-          className="btn-primary mt-5"
-          disabled={personal.kind === "saving"}
-          onClick={() =>
-            save(
-              {
-                name: form.name,
-                email: form.email,
-                ...(initial.role === "broker" ? { rera_number: form.rera_number } : {}),
-              },
-              setPersonal,
-            )
-          }
-        >
-          {personal.kind === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
-        </button>
       </section>
 
       {/* Payout methods */}
@@ -137,20 +126,17 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
             <input className="input uppercase" value={form.bank_ifsc} onChange={(e) => set("bank_ifsc", e.target.value.toUpperCase())} placeholder="HDFC0001234" />
           </Field>
         </div>
-        <StatusRow status={payout} />
-        <button
-          className="btn-primary mt-5"
-          disabled={payout.kind === "saving"}
-          onClick={() =>
-            save(
-              { upi_id: form.upi_id, bank_account: form.bank_account, bank_ifsc: form.bank_ifsc },
-              setPayout,
-            )
-          }
-        >
-          {payout.kind === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save payout details"}
-        </button>
       </section>
+
+      {/* One Save for the whole form */}
+      <div className="sticky bottom-4 z-10">
+        <div className="card p-4 flex items-center justify-between gap-3 shadow-lg">
+          <StatusRow status={status} />
+          <button className="btn-primary ml-auto" disabled={status.kind === "saving"} onClick={saveAll}>
+            {status.kind === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save all changes"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -246,15 +232,15 @@ function VerifyBadge({ label, ok }: { label: string; ok: boolean }) {
 function StatusRow({ status }: { status: Status }) {
   if (status.kind === "saved")
     return (
-      <p className="mt-4 flex items-center gap-2 text-sm font-medium text-emerald-700">
-        <Check className="h-4 w-4" /> Saved
+      <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+        <Check className="h-4 w-4" /> All changes saved
       </p>
     );
   if (status.kind === "error")
     return (
-      <p className="mt-4 flex items-center gap-2 text-sm font-medium text-rose-700">
+      <p className="flex items-center gap-2 text-sm font-medium text-rose-700">
         <AlertTriangle className="h-4 w-4" /> {status.msg}
       </p>
     );
-  return null;
+  return <span className="text-sm text-ink-500">Saves your profile &amp; payout details</span>;
 }

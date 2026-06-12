@@ -6,18 +6,28 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 export const dynamic = "force-dynamic";
 
 /**
- * Upload a KYC / profile document (Aadhaar, PAN, photo, RERA certificate) for
- * the signed-in user. Stores the file in Cloudinary and records the delivery
- * URL in kyc_docs. No external verification — documents are kept on file for
- * manual admin review.
+ * Upload / remove a KYC / profile document for the signed-in user. Files are
+ * stored in Cloudinary and recorded in kyc_docs. No external verification —
+ * documents are kept on file for manual admin review.
  *
- * multipart/form-data:
- *   file — the image or PDF
- *   kind — "aadhaar" | "pan" | "photo" | "rera_cert"
+ * POST   multipart/form-data { file, kind }
+ * DELETE ?kind=<kind>
+ *
+ * kinds: aadhaar_front | aadhaar_back | pan_front | pan_back | photo | rera_cert
+ *        (legacy "aadhaar" | "pan" still accepted)
  */
 
-const ALLOWED = new Set(["aadhaar", "pan", "photo", "rera_cert"]);
-const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
+const ALLOWED = new Set([
+  "aadhaar",
+  "aadhaar_front",
+  "aadhaar_back",
+  "pan",
+  "pan_front",
+  "pan_back",
+  "photo",
+  "rera_cert",
+]);
+const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export async function POST(req: Request) {
   const me = await requireUser();
@@ -39,7 +49,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "No file provided" }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ ok: false, error: "File too large (max 8 MB)" }, { status: 413 });
+    return NextResponse.json({ ok: false, error: "File too large (max 2 MB)" }, { status: 413 });
   }
 
   const admin = supabaseAdmin();
@@ -71,6 +81,29 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || "Upload failed" }, { status: 500 });
   }
+}
+
+/** Remove an uploaded document by kind. */
+export async function DELETE(req: Request) {
+  const me = await requireUser();
+  const kind = new URL(req.url).searchParams.get("kind") || "";
+  if (!ALLOWED.has(kind)) {
+    return NextResponse.json({ ok: false, error: "Invalid document type" }, { status: 400 });
+  }
+
+  const admin = supabaseAdmin();
+  const { error } = await admin
+    .from("kyc_docs")
+    .delete()
+    .eq("user_id", me.authId)
+    .eq("kind", kind);
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+
+  // Clear the avatar pointer if the profile photo was removed.
+  if (kind === "photo") {
+    await admin.from("users").update({ photo_url: null }).eq("id", me.authId);
+  }
+  return NextResponse.json({ ok: true });
 }
 
 /** Return the user's uploaded documents (kind → url). */

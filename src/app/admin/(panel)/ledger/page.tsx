@@ -18,8 +18,8 @@ export default async function LedgerPage() {
     <div>
       <h1 className="text-3xl font-extrabold tracking-tight">Coin Ledger</h1>
       <p className="mt-2 text-ink-500">Immutable, append-only record of every coin credit & debit (last 200).</p>
-      <div className="card mt-6 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card mt-6 overflow-x-auto">
+        <table className="w-full text-sm min-w-[680px]">
           <thead className="bg-ink-50 text-ink-500 uppercase text-xs">
             <tr>
               <th className="px-5 py-3 text-left">Ref</th>

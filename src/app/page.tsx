@@ -8,6 +8,7 @@ import RewardCalculator from "@/components/site/RewardCalculator";
 import EmiCalculator from "@/components/site/EmiCalculator";
 import CTA from "@/components/site/CTA";
 import Footer from "@/components/site/Footer";
+import JoinPopup from "@/components/site/JoinPopup";
 import { buildMetadata, realEstateAgentJsonLd } from "@/lib/seo";
 
 export const metadata = buildMetadata({
@@ -33,6 +34,7 @@ export default function HomePage() {
         <CTA />
       </main>
       <Footer />
+      <JoinPopup />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(realEstateAgentJsonLd()) }}

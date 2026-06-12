@@ -38,6 +38,7 @@ export default function Navbar() {
 
         <div className="hidden lg:flex items-center gap-3">
           <Link href="/auth/login" className="btn-ghost">Sign in</Link>
+          <Link href="/auth/signup" className="btn-outline">Register</Link>
           <Link href="/auth/signup" className="btn-primary">Get 25,000 Coins</Link>
         </div>
 
@@ -66,7 +67,7 @@ export default function Navbar() {
             ))}
             <li className="pt-3 flex gap-2">
               <Link href="/auth/login" className="btn-outline w-1/2">Sign in</Link>
-              <Link href="/auth/signup" className="btn-primary w-1/2">Sign up</Link>
+              <Link href="/auth/signup" className="btn-primary w-1/2">Register</Link>
             </li>
           </ul>
         </div>

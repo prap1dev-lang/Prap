@@ -5,9 +5,10 @@ import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
 import { deleteUserCompletely } from "@/lib/admin-users";
-import { CheckCircle2, XCircle, ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
+import { ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
 import ReraVerifyButton from "@/components/admin/ReraVerifyButton";
 import DeleteUserButton from "@/components/admin/DeleteUserButton";
+import KycDecisionButtons from "@/components/admin/KycDecisionButtons";
 
 export const metadata = buildMetadata({ title: "User · Admin", path: "/admin/users", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -133,16 +134,39 @@ export default async function UserDetail({ params }: { params: { id: string } })
       </section>
 
       <section className="card p-6">
-        <h2 className="font-bold">KYC documents</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold">KYC documents</h2>
+          <span className="text-xs text-ink-500">{docs?.length ?? 0} uploaded</span>
+        </div>
         {!docs || docs.length === 0 ? (
           <p className="mt-3 text-sm text-ink-500">No documents uploaded yet.</p>
         ) : (
-          <ul className="mt-4 grid sm:grid-cols-3 gap-3 text-sm">
+          <ul className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             {docs.map((d) => (
-              <li key={d.id} className="card p-3">
-                <p className="font-semibold capitalize">{d.kind}</p>
-                <p className="text-xs text-ink-500 truncate">{d.storage_key}</p>
-                <p className="text-xs mt-1">{d.verified ? "✅ Verified" : "⏳ Pending"}</p>
+              <li key={d.id}>
+                <a
+                  href={d.storage_key}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block relative aspect-[4/3] rounded-xl border border-ink-200 overflow-hidden bg-ink-50 group"
+                  title="Open full document"
+                >
+                  {isImageUrl(d.storage_key) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={d.storage_key} alt={docLabel(d.kind)} className="absolute inset-0 h-full w-full object-cover" />
+                  ) : (
+                    <span className="absolute inset-0 grid place-items-center text-brand-700">
+                      <span className="flex flex-col items-center">
+                        <ExternalLink className="h-6 w-6" />
+                        <span className="text-xs font-semibold mt-1">Open file</span>
+                      </span>
+                    </span>
+                  )}
+                  <span className="absolute inset-x-0 bottom-0 bg-ink-900/70 text-white text-[11px] font-medium px-2 py-1 flex items-center justify-between">
+                    <span className="truncate">{docLabel(d.kind)}</span>
+                    {d.verified ? <ShieldCheck className="h-3.5 w-3.5 text-emerald-300 flex-none" /> : <span className="text-amber-300 flex-none">⏳</span>}
+                  </span>
+                </a>
               </li>
             ))}
           </ul>
@@ -159,17 +183,15 @@ export default async function UserDetail({ params }: { params: { id: string } })
           <form action={setStatus} className="mt-5 space-y-3">
             <input type="hidden" name="id" value={u.id} />
             <textarea name="notes" className="input" rows={2} placeholder="Internal notes (optional)" />
-            <div className="flex gap-2">
-              <button name="decision" value="approve" className="btn-primary"><CheckCircle2 className="h-4 w-4" /> Approve</button>
-              <button name="decision" value="reject" className="btn-outline"><XCircle className="h-4 w-4" /> Reject</button>
-            </div>
+            <KycDecisionButtons />
           </form>
         </section>
       )}
 
       <section className="card overflow-hidden">
         <div className="p-5 border-b border-ink-100"><h2 className="font-bold">Recent coin activity</h2></div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[560px]">
           <thead className="bg-ink-50 text-ink-500 uppercase text-xs">
             <tr>
               <th className="px-5 py-3 text-left">When</th>
@@ -194,6 +216,7 @@ export default async function UserDetail({ params }: { params: { id: string } })
             )}
           </tbody>
         </table>
+        </div>
       </section>
 
       {u.role !== "admin" && (
@@ -212,6 +235,24 @@ export default async function UserDetail({ params }: { params: { id: string } })
       )}
     </div>
   );
+}
+
+function isImageUrl(url: string) {
+  return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(url) || /\/image\/upload\//.test(url);
+}
+
+const DOC_LABELS: Record<string, string> = {
+  aadhaar: "Aadhaar",
+  aadhaar_front: "Aadhaar — Front",
+  aadhaar_back: "Aadhaar — Back",
+  pan: "PAN",
+  pan_front: "PAN — Front",
+  pan_back: "PAN — Back",
+  photo: "Profile photo",
+  rera_cert: "RERA certificate",
+};
+function docLabel(kind: string) {
+  return DOC_LABELS[kind] ?? kind;
 }
 
 function Pill({ label, ok, subtitle }: { label: string; ok: boolean; subtitle?: string }) {

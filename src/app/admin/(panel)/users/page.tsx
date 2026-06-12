@@ -63,7 +63,8 @@ export default async function UsersPage({ searchParams }: { searchParams?: SP })
           </select>
           <button className="btn-primary">Filter</button>
         </div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[680px]">
           <thead className="bg-ink-50 text-ink-500 uppercase text-xs">
             <tr>
               <th className="px-5 py-3 text-left">Name</th>
@@ -102,6 +103,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: SP })
             )}
           </tbody>
         </table>
+        </div>
       </form>
     </div>
   );

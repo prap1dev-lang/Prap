@@ -40,8 +40,8 @@ export default async function AdminProjects() {
         </Link>
       </header>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm min-w-[680px]">
           <thead className="bg-ink-50 text-ink-500 uppercase text-xs">
             <tr>
               <th className="px-5 py-3 text-left">Project</th>
