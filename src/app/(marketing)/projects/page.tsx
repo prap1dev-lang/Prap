@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { formatINR } from "@/lib/projects";
 import { listProjects } from "@/lib/projects-db";
 import { buildMetadata } from "@/lib/seo";
@@ -62,8 +63,13 @@ export default async function ProjectsPage({
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
                 {p.cover && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.cover} alt={`${p.name} — ${p.builder} in ${p.city}`} className="h-full w-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                  <Image
+                    src={p.cover}
+                    alt={`${p.name} — ${p.builder} in ${p.city}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-105 transition"
+                  />
                 )}
                 <span className="absolute top-3 left-3 badge !bg-white/95 !text-ink-900">
                   <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA

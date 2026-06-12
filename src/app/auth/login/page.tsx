@@ -26,8 +26,10 @@ function normalizePhone(p: string) {
 }
 
 export default function LoginPage() {
+  const [method, setMethod] = useState<"password" | "otp">("password");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +41,37 @@ export default function LoginPage() {
       recaptchaRef.current?.clear();
     };
   }, []);
+
+  async function passwordLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!isValidIndianMobile(phone)) {
+      setError("Enter a valid 10-digit mobile number.");
+      return;
+    }
+    if (!password) {
+      setError("Enter your password.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/password-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok || !body.session) {
+        throw new Error(errorMessage(body.error, "Sign in failed"));
+      }
+      const { error: sessErr } = await supabaseBrowser().auth.setSession(body.session);
+      if (sessErr) throw sessErr;
+      window.location.href = "/dashboard";
+    } catch (e: any) {
+      setError(e?.message || "Sign in failed");
+      setLoading(false);
+    }
+  }
 
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -131,8 +164,72 @@ export default function LoginPage() {
       {/* invisible reCAPTCHA container — Firebase requires a DOM node */}
       <div id="recaptcha-container" />
 
-      {step === "phone" ? (
-        <form onSubmit={sendOtp} className="mt-6 space-y-4">
+      {/* Method switch */}
+      <div className="mt-6 inline-flex rounded-xl bg-ink-50 border border-ink-200 p-1 text-sm font-semibold">
+        <button
+          type="button"
+          onClick={() => { setMethod("password"); setError(null); }}
+          className={`rounded-lg px-4 py-1.5 transition ${method === "password" ? "bg-white shadow-card text-ink-900" : "text-ink-500"}`}
+        >
+          Password
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMethod("otp"); setStep("phone"); setError(null); }}
+          className={`rounded-lg px-4 py-1.5 transition ${method === "otp" ? "bg-white shadow-card text-ink-900" : "text-ink-500"}`}
+        >
+          OTP
+        </button>
+      </div>
+
+      {method === "password" ? (
+        <form onSubmit={passwordLogin} className="mt-5 space-y-4">
+          <div>
+            <label className="label">Phone number</label>
+            <div className="flex">
+              <span className="inline-flex items-center rounded-l-xl border border-r-0 border-ink-200 bg-ink-50 px-3 text-sm font-semibold text-ink-700">+91</span>
+              <input
+                className="input !rounded-l-none"
+                inputMode="numeric"
+                required
+                value={phone}
+                onChange={(e) => {
+                  let d = e.target.value.replace(/\D/g, "");
+                  if (d.startsWith("0")) d = d.slice(1);
+                  setPhone(d.slice(0, 10));
+                }}
+                placeholder="98XXXXXXXX"
+                maxLength={10}
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="label !mb-0">Password</label>
+              <Link href="/auth/forgot-password" className="text-xs font-semibold text-brand-700 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+            <input
+              className="input mt-1.5"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
+              autoComplete="current-password"
+            />
+          </div>
+          {error && <ErrorBox msg={error} />}
+          <button className="btn-primary w-full" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Sign in <ArrowRight className="h-4 w-4" /></>}
+          </button>
+          <p className="text-center text-xs text-ink-500">
+            No password yet? Use the <button type="button" onClick={() => { setMethod("otp"); setStep("phone"); setError(null); }} className="font-semibold text-brand-700 hover:underline">OTP</button> option.
+          </p>
+        </form>
+      ) : step === "phone" ? (
+        <form onSubmit={sendOtp} className="mt-5 space-y-4">
           <div>
             <label className="label">Phone number</label>
             <div className="flex">

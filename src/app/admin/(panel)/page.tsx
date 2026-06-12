@@ -11,32 +11,37 @@ export default async function AdminHome() {
   await requireAdmin();
   const sb = supabaseAdmin();
 
-  const [{ count: usersCount }, { count: projectsCount }, { count: bookingsCount }, { data: floatRow }] = await Promise.all([
+  const [
+    { count: usersCount },
+    { count: projectsCount },
+    { count: bookingsCount },
+    { data: floatRow },
+    { data: pending },
+  ] = await Promise.all([
     sb.from("users").select("*", { count: "exact", head: true }),
     sb.from("projects").select("*", { count: "exact", head: true }).eq("is_listed", true),
     sb.from("bookings").select("*", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 30 * 86400_000).toISOString()),
     sb.from("wallets").select("balance.sum()").single(),
+    sb
+      .from("users")
+      .select("id, name, role, rera_number, created_at")
+      .eq("kyc_status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   const stats = [
-    { icon: Users, label: "Users", value: (usersCount ?? 0).toLocaleString("en-IN"), delta: "All-time" },
-    { icon: Building2, label: "Active projects", value: (projectsCount ?? 0).toLocaleString("en-IN"), delta: "Listed" },
-    { icon: BookKey, label: "Bookings (30d)", value: (bookingsCount ?? 0).toLocaleString("en-IN"), delta: "Rolling" },
+    { icon: Users, label: "Users", value: (usersCount ?? 0).toLocaleString("en-IN"), delta: "All-time", href: "/admin/users" },
+    { icon: Building2, label: "Active projects", value: (projectsCount ?? 0).toLocaleString("en-IN"), delta: "Listed", href: "/admin/projects" },
+    { icon: BookKey, label: "Bookings (30d)", value: (bookingsCount ?? 0).toLocaleString("en-IN"), delta: "Rolling", href: "/admin/bookings" },
     {
       icon: FileCheck,
       label: "Coins in float",
       value: `₹${(((floatRow as any)?.sum ?? 0) as number).toLocaleString("en-IN")}`,
       delta: "Sum of all wallets",
+      href: "/admin/ledger",
     },
   ];
-
-  // Pending approvals = brokers with kyc_status='pending' AND rera_number not null
-  const { data: pending } = await sb
-    .from("users")
-    .select("id, name, role, rera_number, created_at")
-    .eq("kyc_status", "pending")
-    .order("created_at", { ascending: false })
-    .limit(10);
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -44,14 +49,19 @@ export default async function AdminHome() {
 
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.label} className="card p-5">
+          <Link
+            key={s.label}
+            href={s.href}
+            prefetch
+            className="card p-5 transition hover:border-brand-300 hover:shadow-card hover:-translate-y-0.5"
+          >
             <div className="flex items-center justify-between">
               <p className="text-sm text-ink-500">{s.label}</p>
               <s.icon className="h-5 w-5 text-brand-600" />
             </div>
             <p className="mt-2 text-2xl font-extrabold">{s.value}</p>
             <p className="text-xs text-ink-500">{s.delta}</p>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -72,8 +82,10 @@ export default async function AdminHome() {
           </thead>
           <tbody>
             {(pending ?? []).map((u) => (
-              <tr key={u.id} className="border-t border-ink-100">
-                <td className="px-5 py-3 font-semibold">{u.name}</td>
+              <tr key={u.id} className="border-t border-ink-100 hover:bg-ink-50 transition cursor-pointer">
+                <td className="px-5 py-3 font-semibold">
+                  <Link href={`/admin/users/${u.id}`} className="block">{u.name}</Link>
+                </td>
                 <td className="px-5 py-3 capitalize">{u.role}</td>
                 <td className="px-5 py-3 font-mono text-xs">{u.rera_number || "—"}</td>
                 <td className="px-5 py-3 text-ink-500">{new Date(u.created_at).toLocaleDateString("en-IN")}</td>

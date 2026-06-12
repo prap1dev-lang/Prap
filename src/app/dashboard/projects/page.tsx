@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { PROJECTS, formatINR } from "@/lib/projects";
 import { buildMetadata } from "@/lib/seo";
 import { MapPin, BadgeCheck } from "lucide-react";
@@ -14,8 +15,13 @@ export default function Page() {
         {PROJECTS.map((p) => (
           <Link key={p.slug} href={`/projects/${p.slug}`} className="card overflow-hidden group hover:shadow-lg transition">
             <div className="relative aspect-[4/3] bg-ink-100 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.cover} alt={p.name} className="h-full w-full object-cover group-hover:scale-105 transition" />
+              <Image
+                src={p.cover}
+                alt={p.name}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className="object-cover group-hover:scale-105 transition"
+              />
               <span className="absolute top-3 left-3 badge !bg-white/95 !text-ink-900"><BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA</span>
             </div>
             <div className="p-4">

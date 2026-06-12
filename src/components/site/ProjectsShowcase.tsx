@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { listProjects } from "@/lib/projects-db";
 import { formatINR } from "@/lib/projects";
 import { ArrowRight, BadgeCheck, MapPin, Building2 } from "lucide-react";
@@ -29,7 +30,7 @@ export default async function ProjectsShowcase() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-3">
-          {featured.map((p) => (
+          {featured.map((p, i) => (
             <Link
               key={p.slug}
               href={`/projects/${p.slug}`}
@@ -38,12 +39,13 @@ export default async function ProjectsShowcase() {
               {/* Cover */}
               <div className="relative aspect-[16/9] bg-ink-100 overflow-hidden">
                 {p.cover ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={p.cover}
                     alt={p.name}
-                    className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
-                    loading="lazy"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    priority={i === 0}
+                    className="object-cover group-hover:scale-105 transition duration-500"
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center bg-brand-50">

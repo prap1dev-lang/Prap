@@ -9,6 +9,7 @@ import { ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
 import ReraVerifyButton from "@/components/admin/ReraVerifyButton";
 import DeleteUserButton from "@/components/admin/DeleteUserButton";
 import KycDecisionButtons from "@/components/admin/KycDecisionButtons";
+import SendResetButton from "@/components/admin/SendResetButton";
 
 export const metadata = buildMetadata({ title: "User · Admin", path: "/admin/users", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -49,6 +50,20 @@ async function deleteUser(formData: FormData) {
   revalidatePath("/admin/users");
   revalidatePath("/admin");
   redirect("/admin/users");
+}
+
+async function sendPasswordReset(formData: FormData) {
+  "use server";
+  await requireAdmin();
+  const email = String(formData.get("email") || "");
+  if (!email || email.endsWith("@users.prap.in")) {
+    return { ok: false, error: "User has no real email on file — cannot send a reset link." };
+  }
+  const sb = supabaseAdmin();
+  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || ""}/auth/reset-password`;
+  const { error } = await sb.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export default async function UserDetail({ params }: { params: { id: string } }) {
@@ -130,6 +145,31 @@ export default async function UserDetail({ params }: { params: { id: string } })
               <p className="font-bold">{Number(wallet?.lifetime_redeemed || 0).toLocaleString("en-IN")}</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="font-bold flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-brand-600" /> Login &amp; security</h2>
+        <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
+          <div className="rounded-xl border border-ink-100 p-3">
+            <p className="text-xs uppercase tracking-wider font-semibold text-ink-500">Password</p>
+            <p className={`mt-1 font-bold ${u.has_password ? "text-emerald-700" : "text-amber-700"}`}>
+              {u.has_password ? "Set" : "Not set"}
+            </p>
+            {u.password_set_at && (
+              <p className="text-xs text-ink-500 mt-0.5">Set {new Date(u.password_set_at).toLocaleDateString("en-IN")}</p>
+            )}
+            <p className="text-[11px] text-ink-400 mt-1">Passwords are encrypted and never visible.</p>
+          </div>
+          <div className="rounded-xl border border-ink-100 p-3">
+            <p className="text-xs uppercase tracking-wider font-semibold text-ink-500">Login email</p>
+            <p className="mt-1 font-medium text-ink-900 break-all">
+              {u.email || <span className="text-ink-400">— (phone-only)</span>}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <SendResetButton email={u.email} action={sendPasswordReset} />
         </div>
       </section>
 

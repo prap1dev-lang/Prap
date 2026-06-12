@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Coins, LayoutDashboard, Users, Building2, BookKey, FileCheck, Receipt,
   Settings, Banknote, Stethoscope, Menu, X, ExternalLink, LogOut,
 } from "lucide-react";
+import NavProgress from "@/components/admin/NavProgress";
 
 const nav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -53,6 +54,9 @@ export default function AdminShell({
 
   return (
     <div className="min-h-screen lg:h-screen lg:grid lg:grid-cols-[260px_1fr] lg:overflow-hidden bg-ink-50">
+      <Suspense fallback={null}>
+        <NavProgress />
+      </Suspense>
       {/* ===== Mobile topbar ===== */}
       <header className="lg:hidden sticky top-0 z-30 bg-ink-950 text-white border-b border-ink-900">
         <div className="flex items-center justify-between px-4 h-14">
@@ -141,6 +145,7 @@ function Sidebar({
               <Link
                 key={n.href}
                 href={n.href}
+                prefetch
                 className={[
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                   active

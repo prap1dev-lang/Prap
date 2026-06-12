@@ -78,6 +78,7 @@ export default function SignupForm({
     aadhaar: "",
     rera: "",
     referralCode: initialReferral.toUpperCase(),
+    password: "",
   });
   const [otp, setOtp] = useState("");
   const confirmationRef = useRef<ConfirmationResult | null>(null);
@@ -104,6 +105,10 @@ export default function SignupForm({
     }
     if (form.aadhaar.length !== 12) {
       setError("Aadhaar must be exactly 12 digits.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Create a password of at least 8 characters.");
       return;
     }
 
@@ -313,8 +318,26 @@ export default function SignupForm({
         </div>
 
         <div>
-          <label className="label">Email <span className="text-xs text-ink-500 font-normal">— for receipts (optional)</span></label>
+          <label className="label">Email <span className="text-xs text-ink-500 font-normal">— for receipts & password reset (optional)</span></label>
           <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" />
+        </div>
+
+        <div>
+          <label className="label">Create password</label>
+          <input
+            className="input"
+            type="password"
+            required
+            minLength={8}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
+          />
+          <p className="text-xs text-ink-500 mt-1">You'll use your phone &amp; this password to sign in next time.</p>
+          {form.password.length > 0 && form.password.length < 8 && (
+            <p className="text-xs text-rose-600 mt-1">Password must be at least 8 characters.</p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

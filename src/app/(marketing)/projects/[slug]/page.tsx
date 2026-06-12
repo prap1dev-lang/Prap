@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { formatINR } from "@/lib/projects";
 import { getProjectBySlug, listProjectSlugs } from "@/lib/projects-db";
 import { buildMetadata, SITE } from "@/lib/seo";
@@ -71,16 +72,31 @@ export default async function ProjectPage({ params }: Params) {
             <div className="lg:col-span-8 space-y-6">
               {p.cover && (
                 <div className="card overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.cover} alt={`${p.name} cover`} className="w-full aspect-[16/9] object-cover" />
+                  <div className="relative w-full aspect-[16/9]">
+                    <Image
+                      src={p.cover}
+                      alt={`${p.name} cover`}
+                      fill
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 66vw"
+                      className="object-cover"
+                    />
+                  </div>
                 </div>
               )}
 
               {p.gallery && p.gallery.length > 0 && (
                 <div className="grid grid-cols-3 gap-3">
                   {p.gallery.slice(0, 6).map((g, i) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} src={g} alt={`${p.name} gallery ${i + 1}`} className="aspect-square object-cover rounded-xl bg-ink-100" loading="lazy" />
+                    <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-ink-100">
+                      <Image
+                        src={g}
+                        alt={`${p.name} gallery ${i + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 33vw, 220px"
+                        className="object-cover"
+                      />
+                    </div>
                   ))}
                 </div>
               )}

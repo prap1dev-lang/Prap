@@ -25,6 +25,7 @@ const Profile = z.object({
   aadhaar: z.string().length(12).regex(/^\d{12}$/, "Aadhaar must be 12 digits"),
   rera: z.string().optional().default(""),
   referralCode: z.string().optional().default(""),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
 });
 
 const Body = z.object({
@@ -68,8 +69,14 @@ async function findAuthUserIdByEmail(admin: Admin, email: string): Promise<strin
  * settings, so we verify with the plain `email_otp` + email pair, which is
  * independent of SMTP/redirect configuration.
  */
-async function mintSession(email: string) {
+async function mintSession(userId: string) {
   const admin = supabaseAdmin();
+  // Resolve the account's CURRENT auth email (may be the real email if the user
+  // set a password with one, or the synthetic phone email otherwise).
+  const { data: got } = await admin.auth.admin.getUserById(userId);
+  const email = got?.user?.email;
+  if (!email) throw new Error("Account has no email to sign in with");
+
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
@@ -147,9 +154,16 @@ export async function POST(req: Request) {
   if (created.data?.user) {
     authUserId = created.data.user.id;
   } else {
-    // Already exists (or a transient create error) — find the user by email,
-    // paging through the directory so this keeps working past 1000 accounts.
-    authUserId = await findAuthUserIdByEmail(admin, syntheticEmail);
+    // Already exists (or a transient create error). The account's auth email may
+    // now be the user's REAL email (set when they chose a password), so we resolve
+    // by phone first (via the profile table), then fall back to the synthetic
+    // email scan for legacy rows.
+    const { data: byPhone } = await admin
+      .from("users")
+      .select("id")
+      .eq("phone", phone)
+      .maybeSingle();
+    authUserId = byPhone?.id ?? (await findAuthUserIdByEmail(admin, syntheticEmail));
   }
   if (!authUserId) {
     console.error("[exchange] could not resolve auth user", {
@@ -215,6 +229,8 @@ export async function POST(req: Request) {
       referrerIsCorporate = owner.role === "corporate";
     }
 
+    const hasPassword = !!profile.password;
+
     const { error: insertUserErr } = await admin.from("users").insert({
       id: authUserId,
       role,
@@ -229,6 +245,8 @@ export async function POST(req: Request) {
       // Keep employer attribution only when the referrer is a corporate.
       referred_by_corporate: referrerIsCorporate ? referrerId : null,
       kyc_status: "pending",
+      has_password: hasPassword,
+      password_set_at: hasPassword ? new Date().toISOString() : null,
     });
 
     if (insertUserErr) {
@@ -257,6 +275,36 @@ export async function POST(req: Request) {
       console.error("[exchange] coin_ledger insert failed:", ledgerErr);
       await admin.from("users").delete().eq("id", authUserId);
       return NextResponse.json({ ok: false, error: (ledgerErr as any).message }, { status: 500 });
+    }
+
+    // Set the chosen password on the Supabase auth user (bcrypt-hashed by
+    // Supabase). Login resolves the account by phone, then signInWithPassword.
+    // If a real email was given, also set it as the auth email so password-reset
+    // links are deliverable — but a password is set regardless of email outcome.
+    if (hasPassword) {
+      // 1) Always set the password.
+      const { error: pwErr } = await admin.auth.admin.updateUserById(authUserId, {
+        password: profile.password!,
+      });
+      if (pwErr) {
+        console.error("[exchange] set password failed:", pwErr.message);
+        await admin
+          .from("users")
+          .update({ has_password: false, password_set_at: null })
+          .eq("id", authUserId);
+      } else if (profile.email) {
+        // 2) Best-effort: promote the auth email to the real email (for resets).
+        //    Skip silently if that email is already taken by another account.
+        const { error: emailErr } = await admin.auth.admin.updateUserById(authUserId, {
+          email: profile.email,
+          email_confirm: true,
+        });
+        if (emailErr) {
+          console.warn("[exchange] could not set real auth email:", emailErr.message);
+          // Password still works; reset email just won't be deliverable until the
+          // user sets a unique email in Settings.
+        }
+      }
     }
 
     // Every new user gets their own referral code so they can refer others.
@@ -293,7 +341,7 @@ export async function POST(req: Request) {
   // ---- 4. Mint a Supabase session and return tokens ----
   let session;
   try {
-    session = await mintSession(syntheticEmail);
+    session = await mintSession(authUserId);
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || "Could not sign in" }, { status: 500 });
   }

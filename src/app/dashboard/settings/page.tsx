@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import ProfileForm, { type Profile } from "@/components/dashboard/ProfileForm";
 import DocUpload from "@/components/dashboard/DocUpload";
+import PasswordCard from "@/components/dashboard/PasswordCard";
 
 export const metadata = buildMetadata({ title: "Settings", path: "/dashboard/settings", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export default async function SettingsPage() {
     ? await admin
         .from("users")
         .select(
-          "name, email, phone, pan, role, rera_number, upi_id, bank_account, bank_ifsc, photo_url, pan_verified, aadhaar_verified, rera_verified",
+          "name, email, phone, pan, role, rera_number, upi_id, bank_account, bank_ifsc, photo_url, has_password, pan_verified, aadhaar_verified, rera_verified",
         )
         .eq("id", me.authId)
         .maybeSingle()
@@ -51,6 +52,8 @@ export default async function SettingsPage() {
 
       <div className="mt-8 grid gap-6">
         <ProfileForm initial={profile} />
+
+        <PasswordCard hasPassword={!!data?.has_password} />
 
         <section className="card p-6">
           <h2 className="font-bold">KYC documents</h2>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const Body = z.object({
   name: z.string().min(1),
@@ -209,6 +209,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
+  revalidateTag("projects"); // refresh the cached project list immediately
   revalidatePath("/admin/projects");
   revalidatePath("/projects");
   revalidatePath("/");
