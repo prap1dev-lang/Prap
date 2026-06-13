@@ -23,7 +23,8 @@
       "Bash(grep -iE \"error|failed|Compiled successfully|api/me|/$\")",
       "Bash(echo \"exit=$?\")",
       "PowerShell(\"cleaned\")",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "PowerShell(\"removed dashboard explore + nav lib\")"
     ],
     "additionalDirectories": [
       "\\tmp"

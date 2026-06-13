@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/seo";
 import { PROJECTS, CITY_SLUGS } from "@/lib/projects";
+import { SERVICES } from "@/lib/services-nav";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
@@ -41,5 +42,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...projectRoutes, ...cityRoutes];
+  // Public service pages (only the /services/* explore pages, not real-page links).
+  const serviceRoutes = SERVICES.flatMap((col) =>
+    col.items
+      .filter((it) => it.href.startsWith("/services/"))
+      .map((it) => ({
+        url: `${SITE.url}${it.href}`,
+        lastModified: now,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      })),
+  );
+
+  return [...staticRoutes, ...projectRoutes, ...cityRoutes, ...serviceRoutes];
 }

@@ -1,19 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import UserMenu from "./UserMenu";
+import ServicesMenu from "./ServicesMenu";
+import { SERVICES } from "@/lib/services-nav";
 
 const links = [
   { href: "/projects", label: "Projects" },
   { href: "/buyer-protection", label: "Protection" },
-  { href: "/city/noida", label: "Noida" },
   { href: "/how-it-works", label: "How it works" },
-  { href: "/for-brokers", label: "Brokers" },
 ];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [mobileServices, setMobileServices] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function Navbar() {
         </Link>
 
         <ul className="hidden lg:flex items-center gap-9 text-[0.7rem] font-medium uppercase tracking-[0.18em] text-ink-600">
+          <li><ServicesMenu /></li>
           {links.map((l) => (
             <li key={l.href}>
               <Link href={l.href} className="hover:text-brand-600 transition-colors">
@@ -60,8 +62,39 @@ export default function Navbar() {
       </nav>
 
       {open && (
-        <div className="lg:hidden bg-ivory/90 backdrop-blur-xl border-t border-ink-900/5">
+        <div className="lg:hidden bg-ivory/95 backdrop-blur-xl border-t border-ink-900/5 max-h-[80vh] overflow-y-auto">
           <ul className="container py-5 space-y-1">
+            {/* Services accordion */}
+            <li>
+              <button
+                onClick={() => setMobileServices((s) => !s)}
+                className="flex w-full items-center justify-between px-3 py-3 rounded-2xl text-sm uppercase tracking-[0.14em] text-ink-700 hover:bg-ink-900/5"
+              >
+                Services
+                <ChevronDown className={`h-4 w-4 transition-transform ${mobileServices ? "rotate-180" : ""}`} />
+              </button>
+              {mobileServices && (
+                <div className="ml-3 pl-3 border-l border-ink-900/5 py-1 space-y-4">
+                  {SERVICES.map((col) => (
+                    <div key={col.title}>
+                      <p className="flex items-center gap-2 px-2 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-brand-600">
+                        <col.icon className="h-3.5 w-3.5" strokeWidth={1.6} /> {col.title}
+                      </p>
+                      <ul className="mt-1.5 space-y-0.5">
+                        {col.items.slice(0, 5).map((it) => (
+                          <li key={it.label}>
+                            <Link href={it.href} onClick={() => setOpen(false)} className="block px-2 py-1.5 rounded-xl text-[0.82rem] text-ink-600 hover:bg-ink-900/5">
+                              {it.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </li>
+
             {links.map((l) => (
               <li key={l.href}>
                 <Link
