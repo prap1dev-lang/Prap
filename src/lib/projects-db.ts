@@ -66,12 +66,15 @@ const getAllListedProjects = unstable_cache(
   { revalidate: 300, tags: ["projects"] },
 );
 
-export async function listProjects(opts: { city?: string; q?: string; limit?: number } = {}): Promise<Project[]> {
+export async function listProjects(
+  opts: { city?: string; q?: string; status?: string; limit?: number } = {},
+): Promise<Project[]> {
   let list = await getAllListedProjects();
   if (opts.city) list = list.filter((p) => p.city === opts.city);
+  if (opts.status) list = list.filter((p) => p.status === opts.status);
   if (opts.q) {
     const s = opts.q.toLowerCase();
-    list = list.filter((p) => [p.name, p.builder, p.sector].join(" ").toLowerCase().includes(s));
+    list = list.filter((p) => [p.name, p.builder, p.sector, p.city].join(" ").toLowerCase().includes(s));
   }
   if (opts.limit) list = list.slice(0, opts.limit);
   return list;

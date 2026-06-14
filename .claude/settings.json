@@ -30,7 +30,8 @@
       "Bash(firebase deploy *)",
       "Bash(node verify-brochure-upload.mjs)",
       "Bash(node cleanup-test.mjs)",
-      "Bash(rm -f cleanup-test.mjs)"
+      "Bash(rm -f cleanup-test.mjs)",
+      "Bash(curl -s \"https://maps.googleapis.com/maps/api/geocode/json?latlng=28.5708,77.3260&key=AIzaSyA8MRze6A1WChUQJzuBd8v6w7DfszXvd9w&language=en&region=in\")"
     ],
     "additionalDirectories": [
       "\\tmp"
