@@ -5,11 +5,17 @@ import { formatINR } from "@/lib/projects";
 import { getProjectBySlug, listProjectSlugs } from "@/lib/projects-db";
 import { DETAIL_SECTIONS } from "@/lib/project-fields";
 import Gallery from "./Gallery";
+import Accordion from "@/components/ui/Accordion";
+import EmiMini from "./EmiMini";
+import BrochureButton from "./BrochureButton";
 import { amenitiesFromIds } from "@/lib/amenities";
+import { listPublishedReviews, averageRating } from "@/lib/reviews";
+import { waLink, projectEnquiryMessage } from "@/lib/whatsapp";
 import { buildMetadata, SITE } from "@/lib/seo";
 import {
   BadgeCheck, MapPin, Coins, CheckCircle2, Calendar, Building2,
-  IndianRupee, Ruler, Download, Phone, Home, Sparkles,
+  IndianRupee, Ruler, Phone, Home, Sparkles, Star, FileText,
+  MessageCircle, Info, Bath,
 } from "lucide-react";
 
 type Params = { params: { slug: string } };
@@ -44,6 +50,16 @@ export default async function ProjectPage({ params }: Params) {
 
   const m = p.meta ?? {};
   const amenityList = amenitiesFromIds(p.amenityTags ?? []);
+  const reviews = await listPublishedReviews(p.slug);
+  const avgRating = averageRating(reviews);
+  const waMsg = projectEnquiryMessage(p.name, p.slug, p.sector, p.city);
+
+  // Render the free-text description as concise points (split on line breaks,
+  // bullets or sentences) — point-wise reads cleaner and is more SEO-scannable.
+  const descPoints = (p.description || "")
+    .split(/\n+|•|·|(?<=\.)\s+(?=[A-Z])/)
+    .map((s) => s.trim().replace(/^[-–•]\s*/, ""))
+    .filter((s) => s.length > 1);
 
   const productLd = {
     "@context": "https://schema.org",
@@ -84,19 +100,20 @@ export default async function ProjectPage({ params }: Params) {
   return (
     <>
       <article>
-        {/* ── Hero ── */}
+        {/* ── Hero ── (image stacks above title on mobile, overlays on sm+) */}
         <header className="relative bg-ink-900">
           {p.cover ? (
-            <div className="relative w-full aspect-[16/10] sm:aspect-[21/9] max-h-[520px]">
+            <div className="relative w-full aspect-[4/3] sm:aspect-[21/9] sm:max-h-[520px]">
               <Image src={p.cover} alt={`${p.name} cover`} fill priority sizes="100vw" className="object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
             </div>
           ) : (
-            <div className="w-full h-44 bg-gradient-to-br from-brand-700 to-brand-500" />
+            <div className="w-full h-36 sm:h-44 bg-gradient-to-br from-brand-700 to-brand-500" />
           )}
 
-          <div className="absolute inset-x-0 bottom-0">
-            <div className="container pb-5 sm:pb-7">
+          {/* On mobile this sits below the image (dark bg); on sm+ it overlays the image */}
+          <div className="bg-ink-900 sm:bg-transparent sm:absolute sm:inset-x-0 sm:bottom-0">
+            <div className="container py-4 sm:py-0 sm:pb-7">
               <nav className="text-xs sm:text-sm mb-3 text-white/80">
                 <Link href="/" className="hover:underline">Home</Link> /{" "}
                 <Link href="/projects" className="hover:underline">Projects</Link> /{" "}
@@ -106,7 +123,7 @@ export default async function ProjectPage({ params }: Params) {
                 <span className="badge !bg-white/90 !text-ink-900"><BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA: {p.rera}</span>
                 <span className="badge !bg-brand-600 !text-white">{p.status}</span>
               </div>
-              <h1 className="font-serif text-3xl sm:text-5xl font-light tracking-[-0.02em] text-white">{p.name}</h1>
+              <h1 className="font-serif text-2xl sm:text-5xl font-light tracking-[-0.02em] text-white">{p.name}</h1>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm sm:text-base text-white/90">
                 <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {p.sector ? `${p.sector}, ` : ""}{p.city}</span>
                 <span className="opacity-60">·</span>
@@ -116,6 +133,7 @@ export default async function ProjectPage({ params }: Params) {
           </div>
         </header>
 
+        <div className="bg-grid-fade">
         <div className="container py-6 sm:py-10">
           {/* ── Quick stats band ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -142,134 +160,160 @@ export default async function ProjectPage({ params }: Params) {
                 <Gallery images={p.gallery} name={p.name} />
               )}
 
-              {/* In-page section nav (jump links) */}
-              <div className="card p-2 sticky top-24 z-20 overflow-x-auto">
-                <div className="flex gap-1 min-w-max text-sm">
-                  {p.unitTypes && p.unitTypes.length > 0 && <a href="#units" className="px-3 py-1.5 rounded-lg hover:bg-ink-50 text-ink-600 whitespace-nowrap">Pricing</a>}
-                  {p.description && <a href="#about" className="px-3 py-1.5 rounded-lg hover:bg-ink-50 text-ink-600 whitespace-nowrap">About</a>}
-                  {p.amenities?.length > 0 && <a href="#amenities" className="px-3 py-1.5 rounded-lg hover:bg-ink-50 text-ink-600 whitespace-nowrap">Amenities</a>}
-                  {filledSections.map((s) => (
-                    <a key={s.title} href={`#${slugifyAnchor(s.title)}`} className="px-3 py-1.5 rounded-lg hover:bg-ink-50 text-ink-600 whitespace-nowrap">{s.title}</a>
-                  ))}
-                </div>
-              </div>
-
-              {/* Unit types & pricing — one card per BHK type */}
-              {p.unitTypes && p.unitTypes.length > 0 && (
-                <section id="units" className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="font-serif text-xl sm:text-2xl font-light flex items-center gap-2"><IndianRupee className="h-5 w-5 text-brand-600" /> Unit types, sizes &amp; pricing</h2>
-                  <div className="mt-5 grid sm:grid-cols-2 gap-4">
-                    {p.unitTypes.map((u, i) => (
-                      <div key={i} className="rounded-2xl border border-ink-200 p-4 hover:border-brand-300 hover:shadow-card transition">
-                        <div className="flex items-start justify-between gap-3">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold text-brand-700">
-                            <Home className="h-4 w-4" /> {u.config}
-                          </span>
-                          <div className="text-right">
-                            <p className="text-[11px] uppercase tracking-wider text-ink-400">Starting at</p>
-                            <p className="font-extrabold text-brand-700">{u.price ? formatINR(Number(u.price)) : "On request"}</p>
-                          </div>
-                        </div>
-                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                          <div className="rounded-lg bg-ink-50 px-3 py-2">
-                            <p className="text-[11px] uppercase tracking-wider text-ink-400 flex items-center gap-1"><Ruler className="h-3 w-3" /> Super area</p>
-                            <p className="font-semibold text-ink-900">{u.superArea ? `${u.superArea} sq.ft.` : "—"}</p>
-                          </div>
-                          <div className="rounded-lg bg-ink-50 px-3 py-2">
-                            <p className="text-[11px] uppercase tracking-wider text-ink-400 flex items-center gap-1"><Ruler className="h-3 w-3" /> Carpet area</p>
-                            <p className="font-semibold text-ink-900">{u.carpetArea ? `${u.carpetArea} sq.ft.` : "—"}</p>
-                          </div>
-                          {u.bathrooms && (
-                            <div className="rounded-lg bg-ink-50 px-3 py-2">
-                              <p className="text-[11px] uppercase tracking-wider text-ink-400">Bathrooms</p>
-                              <p className="font-semibold text-ink-900">{u.bathrooms}</p>
+              <Accordion sections={[
+                {
+                  id: "about", title: `About ${p.name}`, icon: Info, filled: descPoints.length > 0, content: (
+                    <ul className="space-y-2 text-ink-700">
+                      {descPoints.map((pt, i) => (
+                        <li key={i} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none mt-0.5" /> <span>{pt}</span></li>
+                      ))}
+                    </ul>
+                  ),
+                },
+                {
+                  id: "highlights", title: "Highlights", icon: Sparkles, filled: !!(p.highlights && p.highlights.length > 0), content: (
+                    <ul className="grid sm:grid-cols-2 gap-2 text-ink-700">
+                      {(p.highlights ?? []).map((h) => (
+                        <li key={h} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none mt-0.5" /> <span>{h}</span></li>
+                      ))}
+                    </ul>
+                  ),
+                },
+                {
+                  id: "pricing", title: "Pricing & Units", icon: IndianRupee, filled: !!(p.unitTypes && p.unitTypes.length > 0), content: (
+                    <div>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        {[...(p.unitTypes ?? [])].sort((a, b) => (Number(a.price) || Infinity) - (Number(b.price) || Infinity)).map((u, i) => (
+                          <div key={i} className="rounded-2xl border border-ink-200 p-4 hover:border-brand-300 hover:shadow-card transition">
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold text-brand-700">
+                                <Home className="h-4 w-4" /> {u.config}
+                              </span>
+                              <div className="text-right">
+                                <p className="text-[11px] uppercase tracking-wider text-ink-400">Starting at</p>
+                                <p className="font-extrabold text-brand-700">{u.price ? formatINR(Number(u.price)) : "On request"}</p>
+                              </div>
                             </div>
-                          )}
-                          {u.balconyArea && (
-                            <div className="rounded-lg bg-ink-50 px-3 py-2">
-                              <p className="text-[11px] uppercase tracking-wider text-ink-400">Balcony</p>
-                              <p className="font-semibold text-ink-900">{u.balconyArea} sq.ft.</p>
+                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                              <div className="rounded-lg bg-ink-50 px-3 py-2">
+                                <p className="text-[11px] uppercase tracking-wider text-ink-400 flex items-center gap-1"><Ruler className="h-3 w-3" /> Super area</p>
+                                <p className="font-semibold text-ink-900">{u.superArea ? `${u.superArea} sq.ft.` : "—"}</p>
+                              </div>
+                              <div className="rounded-lg bg-ink-50 px-3 py-2">
+                                <p className="text-[11px] uppercase tracking-wider text-ink-400 flex items-center gap-1"><Ruler className="h-3 w-3" /> Carpet area</p>
+                                <p className="font-semibold text-ink-900">{u.carpetArea ? `${u.carpetArea} sq.ft.` : "—"}</p>
+                              </div>
+                              {u.bathrooms && (
+                                <div className="rounded-lg bg-ink-50 px-3 py-2">
+                                  <p className="text-[11px] uppercase tracking-wider text-ink-400 flex items-center gap-1"><Bath className="h-3 w-3" /> Bathrooms</p>
+                                  <p className="font-semibold text-ink-900">{u.bathrooms}</p>
+                                </div>
+                              )}
+                              {u.balconyArea && (
+                                <div className="rounded-lg bg-ink-50 px-3 py-2">
+                                  <p className="text-[11px] uppercase tracking-wider text-ink-400">Balcony</p>
+                                  <p className="font-semibold text-ink-900">{u.balconyArea} sq.ft.</p>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* About */}
-              {p.description && (
-                <section id="about" className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="font-serif text-xl sm:text-2xl font-light">About {p.name}</h2>
-                  <p className="mt-3 text-ink-700 leading-relaxed whitespace-pre-line">{p.description}</p>
-                </section>
-              )}
-
-              {/* Highlights */}
-              {p.highlights && p.highlights.length > 0 && (
-                <section className="card p-5 sm:p-6">
-                  <h2 className="font-serif text-xl sm:text-2xl font-light flex items-center gap-2"><Sparkles className="h-5 w-5 text-brand-600" /> Highlights</h2>
-                  <ul className="mt-4 grid sm:grid-cols-2 gap-2 text-ink-700">
-                    {p.highlights.map((h) => (
-                      <li key={h} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none" /> {h}</li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {/* Amenities — icon tags */}
-              {(amenityList.length > 0 || (p.amenities && p.amenities.length > 0)) && (
-                <section id="amenities" className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="font-serif text-xl sm:text-2xl font-light">Amenities</h2>
-                  {amenityList.length > 0 ? (
-                    <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {amenityList.map((a) => {
-                        const Icon = a.icon;
-                        return (
-                          <div key={a.id} className="flex items-center gap-2.5 rounded-xl border border-ink-100 bg-ink-50/50 px-3 py-2.5">
-                            <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-brand-50 text-brand-700">
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <span className="text-sm text-ink-800 leading-tight">{a.label}</span>
-                          </div>
-                        );
-                      })}
+                      <div className="mt-6">
+                        <h3 className="font-serif text-lg font-light mb-3">EMI estimate</h3>
+                        <EmiMini price={p.startingPrice} projectName={p.name} slug={p.slug} />
+                      </div>
                     </div>
-                  ) : (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {p.amenities.map((a) => (
-                        <span key={a} className="rounded-full bg-ink-100 px-3 py-1 text-sm text-ink-700">{a}</span>
+                  ),
+                },
+                {
+                  id: "amenities", title: "Amenities", icon: Star, filled: amenityList.length > 0 || !!(p.amenities && p.amenities.length > 0), content: (
+                    amenityList.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {amenityList.map((a) => {
+                          const Icon = a.icon;
+                          return (
+                            <div key={a.id} className="flex items-center gap-2.5 rounded-xl border border-ink-100 bg-ink-50/50 px-3 py-2.5">
+                              <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-brand-50 text-brand-700">
+                                <Icon className="h-4 w-4" />
+                              </span>
+                              <span className="text-sm text-ink-800 leading-tight">{a.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {(p.amenities ?? []).map((a) => (
+                          <span key={a} className="rounded-full bg-ink-100 px-3 py-1 text-sm text-ink-700">{a}</span>
+                        ))}
+                      </div>
+                    )
+                  ),
+                },
+                {
+                  id: "details", title: "Specifications & Details", icon: FileText, filled: filledSections.length > 0, content: (
+                    <div className="space-y-6">
+                      {filledSections.map((section) => (
+                        <div key={section.title}>
+                          <h3 className="font-semibold text-ink-900 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-brand-500" /> {section.title}</h3>
+                          <dl className="mt-2 grid sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
+                            {section.rows.map((r) => (
+                              <div key={r.label} className="flex justify-between gap-4 border-b border-ink-50 py-2.5">
+                                <dt className="text-ink-500">{r.label}</dt>
+                                <dd className="font-medium text-ink-900 text-right">{r.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </div>
                       ))}
                     </div>
-                  )}
-                </section>
-              )}
-
-              {/* All extended detail sections */}
-              {filledSections.map((section) => (
-                <section key={section.title} id={slugifyAnchor(section.title)} className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="font-serif text-xl sm:text-2xl font-light">{section.title}</h2>
-                  <dl className="mt-4 grid sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
-                    {section.rows.map((r) => (
-                      <div key={r.label} className="flex justify-between gap-4 border-b border-ink-50 py-2.5">
-                        <dt className="text-ink-500">{r.label}</dt>
-                        <dd className="font-medium text-ink-900 text-right">{r.value}</dd>
+                  ),
+                },
+                {
+                  id: "reviews", title: `Customer Reviews${reviews.length ? ` (${reviews.length})` : ""}`, icon: Star, filled: reviews.length > 0, content: (
+                    <div>
+                      {reviews.length > 0 && (
+                        <div className="inline-flex items-center gap-2 mb-4">
+                          <span className="inline-flex">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <Star key={n} className={`h-4 w-4 ${n <= Math.round(avgRating) ? "fill-amber-400 text-amber-400" : "text-ink-200"}`} />
+                            ))}
+                          </span>
+                          <span className="text-sm font-semibold text-ink-900">{avgRating}</span>
+                          <span className="text-sm text-ink-400">({reviews.length})</span>
+                        </div>
+                      )}
+                      <div className="space-y-4">
+                        {reviews.map((rv) => (
+                          <div key={rv.id} className="rounded-xl border border-ink-100 p-4">
+                            <div className="flex items-center gap-2">
+                              <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-50 text-brand-700 text-sm font-bold">
+                                {rv.author_name.slice(0, 1).toUpperCase()}
+                              </span>
+                              <span className="font-semibold text-ink-900">{rv.author_name}</span>
+                              <span className="inline-flex ml-auto">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <Star key={n} className={`h-3.5 w-3.5 ${n <= rv.rating ? "fill-amber-400 text-amber-400" : "text-ink-200"}`} />
+                                ))}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-ink-700 leading-relaxed">{rv.body}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </dl>
-                </section>
-              ))}
+                    </div>
+                  ),
+                },
+              ]} />
 
               {m.brochureUrl && (
                 <section className="card p-5 sm:p-6 flex items-center justify-between flex-wrap gap-3 bg-gradient-to-r from-brand-50 to-transparent">
                   <div>
                     <h2 className="font-serif text-xl sm:text-2xl font-light">Project brochure</h2>
-                    <p className="mt-1 text-sm text-ink-500">Download the official PDF for full details.</p>
+                    <p className="mt-1 text-sm text-ink-500">Download the official PDF — we'll connect you to an expert too.</p>
                   </div>
-                  <a href={m.brochureUrl} target="_blank" rel="noopener noreferrer" className="btn-primary">
-                    <Download className="h-4 w-4" /> Download brochure
-                  </a>
+                  <BrochureButton url={m.brochureUrl} slug={p.slug} />
                 </section>
               )}
             </div>
@@ -297,6 +341,14 @@ export default async function ProjectPage({ params }: Params) {
                 </div>
                 <div className="mt-4 space-y-2">
                   <Link href="/auth/signup" className="btn-primary w-full">Book a site visit</Link>
+                  <a
+                    href={waLink(waMsg)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-white font-semibold hover:brightness-105 transition"
+                  >
+                    <MessageCircle className="h-5 w-5" /> Chat on WhatsApp
+                  </a>
                   <Link href={`/contact?project=${p.slug}`} className="btn-outline w-full">
                     <Phone className="h-4 w-4" /> Talk to expert
                   </Link>
@@ -304,6 +356,7 @@ export default async function ProjectPage({ params }: Params) {
               </div>
             </aside>
           </div>
+        </div>
         </div>
       </article>
 
@@ -314,16 +367,12 @@ export default async function ProjectPage({ params }: Params) {
           <p className="text-base font-bold text-brand-700 truncate">{formatINR(p.startingPrice)}</p>
         </div>
         <Link href="/auth/signup" className="btn-primary flex-1 justify-center">Book visit</Link>
-        <Link href={`/contact?project=${p.slug}`} className="btn-outline justify-center !px-3" aria-label="Talk to expert">
-          <Phone className="h-4 w-4" />
-        </Link>
+        <a href={waLink(waMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-full bg-[#25D366] text-white !px-3 py-3" aria-label="Chat on WhatsApp">
+          <MessageCircle className="h-5 w-5" />
+        </a>
       </div>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }} />
     </>
   );
-}
-
-function slugifyAnchor(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }

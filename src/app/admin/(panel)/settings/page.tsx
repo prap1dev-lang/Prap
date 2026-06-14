@@ -5,7 +5,7 @@ export const metadata = buildMetadata({ title: "Settings · Admin", path: "/admi
 export default function Page() {
   return (
     <div className="max-w-3xl">
-      <h1 className="text-3xl font-extrabold tracking-tight">Platform settings</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Platform settings</h1>
       <p className="mt-2 text-ink-500">Tunable parameters and integrations.</p>
       <div className="card mt-6 p-6 grid gap-4">
         <Row k="SMS gateway" v="Firebase (active)" />

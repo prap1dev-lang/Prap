@@ -54,7 +54,7 @@ function AdminLoginInner() {
 
   return (
     <Shell>
-      <h1 className="text-3xl font-extrabold tracking-tight">Admin sign-in</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Admin sign-in</h1>
       <p className="mt-2 text-ink-700">Use the credentials set in Supabase Auth.</p>
 
       <form onSubmit={submit} className="mt-6 space-y-4">

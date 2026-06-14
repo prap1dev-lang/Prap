@@ -4,6 +4,11 @@ export const SITE = {
   name: "PRAP",
   fullName: "PRAP — Property Referral Award Platform",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://prap.in",
+  // Single source of truth for the public contact number.
+  phone: "7688999955",
+  phoneDisplay: "+91 76889 99955",
+  phoneTel: "+917688999955",
+  email: "support@prap.in",
   description:
     "PRAP is India's first reward-driven real-estate referral platform. Visit verified RERA projects in Noida, Greater Noida & across India, earn PRAP Coins (1 Coin = ₹1), redeem to bank or use against property payments.",
   keywords: [
@@ -107,7 +112,7 @@ export function organizationJsonLd() {
       {
         "@type": "ContactPoint",
         contactType: "customer support",
-        telephone: "+91-000-000-0000",
+        telephone: SITE.phoneTel,
         email: "support@prap.in",
         areaServed: "IN",
         availableLanguage: ["English", "Hindi"],
@@ -137,7 +142,7 @@ export function realEstateAgentJsonLd() {
     name: SITE.name,
     image: `${SITE.url}/logo.png`,
     url: SITE.url,
-    telephone: "+91-000-000-0000",
+    telephone: SITE.phoneTel,
     areaServed: ["Noida", "Greater Noida", "Delhi NCR", "India"],
     address: {
       "@type": "PostalAddress",

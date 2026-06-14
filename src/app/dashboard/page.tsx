@@ -72,7 +72,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <p className="text-sm text-ink-500 capitalize">{role} dashboard</p>
-          <h1 className="text-3xl font-extrabold tracking-tight">Hello, {row?.name?.split(" ")[0] || me?.name?.split(" ")[0] || "Investor"} 👋</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Hello, {row?.name?.split(" ")[0] || me?.name?.split(" ")[0] || "Investor"} 👋</h1>
         </div>
         <Link href="/dashboard/bookings" className="btn-primary">Book a site visit</Link>
       </header>
@@ -83,7 +83,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
             <p className="text-sm text-ink-500">PRAP Coin balance</p>
             <Coins className="h-5 w-5 text-brand-600" />
           </div>
-          <p className="mt-2 text-3xl font-extrabold">{balance.toLocaleString("en-IN")}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold">{balance.toLocaleString("en-IN")}</p>
           <p className="text-xs text-ink-500">≈ ₹{balance.toLocaleString("en-IN")} · Redeemable after 50% milestone</p>
         </div>
         <div className="card p-6">
@@ -91,7 +91,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
             <p className="text-sm text-ink-500">Site visits</p>
             <Calendar className="h-5 w-5 text-brand-600" />
           </div>
-          <p className="mt-2 text-3xl font-extrabold">0 / 2</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold">0 / 2</p>
           <p className="text-xs text-ink-500">10,000 coins per visit (max 2 visits)</p>
         </div>
         <div className="card p-6">
@@ -99,7 +99,7 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
             <p className="text-sm text-ink-500">Lifetime earnings</p>
             <TrendingUp className="h-5 w-5 text-brand-600" />
           </div>
-          <p className="mt-2 text-3xl font-extrabold">₹{lifetimeRedeemed.toLocaleString("en-IN")}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold">₹{lifetimeRedeemed.toLocaleString("en-IN")}</p>
           <p className="text-xs text-ink-500">Across all redemptions to bank</p>
         </div>
       </section>

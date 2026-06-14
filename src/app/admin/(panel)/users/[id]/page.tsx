@@ -203,7 +203,7 @@ export default async function UserDetail({ params }: { params: { id: string } })
           </div>
           <div>
             <p className="text-sm text-ink-500 capitalize">{u.role}</p>
-            <h1 className="text-3xl font-extrabold tracking-tight">{u.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{u.name}</h1>
             <p className="text-ink-500 mt-1">{u.email || "—"} · {u.phone}</p>
           </div>
         </div>
@@ -257,7 +257,7 @@ export default async function UserDetail({ params }: { params: { id: string } })
 
         <div className="card p-6">
           <h2 className="font-bold">Wallet</h2>
-          <p className="mt-3 text-3xl font-extrabold">{Number(wallet?.balance || 0).toLocaleString("en-IN")} <span className="text-brand-600 text-base font-bold">Coins</span></p>
+          <p className="mt-3 text-2xl sm:text-3xl font-extrabold">{Number(wallet?.balance || 0).toLocaleString("en-IN")} <span className="text-brand-600 text-base font-bold">Coins</span></p>
           <p className="text-xs text-ink-500">≈ ₹{Number(wallet?.balance || 0).toLocaleString("en-IN")}</p>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl bg-ink-50 p-3">

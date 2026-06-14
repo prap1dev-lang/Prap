@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           PRAP<span className="text-brand-400">.</span>
         </Link>
         <div className="relative z-10 max-w-md">
-          <h2 className="font-serif text-4xl font-light leading-[1.1]">
+          <h2 className="font-serif text-3xl sm:text-4xl font-light leading-[1.1]">
             Property, <span className="italic">verified</span> before you invest.
           </h2>
           <p className="mt-5 text-ivory/80 font-light leading-relaxed">

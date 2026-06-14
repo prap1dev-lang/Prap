@@ -150,14 +150,16 @@ const INITIAL: FormState = {
 // ─── Steps definition ─────────────────────────────────────────────────────────
 
 // Step sequence modelled on 99acres' "Post Property" flow.
+// `color` gives each step a distinct accent so the admin can tell at a glance
+// which stage they're on (colourful icon chips).
 const STEPS = [
-  { id: 1, title: "Basic Details", icon: Building2 },
-  { id: 2, title: "Legal & RERA", icon: Scale },
-  { id: 3, title: "Property Profile", icon: Home },
-  { id: 4, title: "Pricing & Charges", icon: DollarSign },
-  { id: 5, title: "Amenities", icon: Star },
-  { id: 6, title: "Locality & Investment", icon: MapPin },
-  { id: 7, title: "Photos & Publish", icon: ShieldCheck },
+  { id: 1, title: "Basic Details", icon: Building2, color: "bg-sky-100 text-sky-700" },
+  { id: 2, title: "Legal & RERA", icon: Scale, color: "bg-violet-100 text-violet-700" },
+  { id: 3, title: "Property Profile", icon: Home, color: "bg-emerald-100 text-emerald-700" },
+  { id: 4, title: "Pricing & Charges", icon: DollarSign, color: "bg-amber-100 text-amber-700" },
+  { id: 5, title: "Amenities", icon: Star, color: "bg-pink-100 text-pink-700" },
+  { id: 6, title: "Locality & Investment", icon: MapPin, color: "bg-teal-100 text-teal-700" },
+  { id: 7, title: "Photos & Publish", icon: ShieldCheck, color: "bg-indigo-100 text-indigo-700" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -523,6 +525,41 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
   const toggleAmenity = (id: string) =>
     setAmenityTags((tags) => (tags.includes(id) ? tags.filter((t) => t !== id) : [...tags, id]));
 
+  // ── Geo-locate: fetch device GPS → reverse-geocode → fill city/locality ──
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const KNOWN_CITIES = ["Noida", "Greater Noida", "Yamuna Expressway", "Gurgaon", "Delhi"];
+  function pickLocation() {
+    setGeoError(null);
+    if (!("geolocation" in navigator)) { setGeoError("Location not supported on this device."); return; }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok || !body.ok) throw new Error(body.error || "Could not detect location.");
+          setForm((f) => ({
+            ...f,
+            city: KNOWN_CITIES.includes(body.city) ? body.city : "Other",
+            sector: body.locality || f.sector,
+            location: f.location || body.formatted || "",
+          }));
+        } catch (e: any) {
+          setGeoError(e?.message || "Could not detect location.");
+        } finally {
+          setGeoLoading(false);
+        }
+      },
+      (err) => {
+        setGeoLoading(false);
+        setGeoError(err.code === err.PERMISSION_DENIED ? "Permission denied — enable location access." : "Couldn't get location.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  }
+
   // Overall completion: share of fillable fields that have a value, including
   // the four media uploads. `isListed` is a default toggle and not counted.
   const completion = (() => {
@@ -598,7 +635,17 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
         <div className="flex-1 min-w-0">
         {/* Mobile: compact current-step label */}
         <div className="sm:hidden flex items-center justify-between">
-          <span className="text-sm font-bold text-ink-900">
+          <span className="flex items-center gap-2 text-sm font-bold text-ink-900">
+            {(() => {
+              const cur = STEPS.find((s) => s.id === step);
+              if (!cur) return null;
+              const CurIcon = cur.icon;
+              return (
+                <span className={`grid h-7 w-7 place-items-center rounded-lg ${cur.color}`}>
+                  <CurIcon className="h-4 w-4" />
+                </span>
+              );
+            })()}
             {STEPS.find((s) => s.id === step)?.title}
           </span>
           <span className="text-xs font-medium text-ink-400">Step {step} / {STEPS.length}</span>
@@ -622,11 +669,9 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                       : "bg-ink-50 text-ink-400 cursor-default"
                   }`}
                 >
-                  {isDone ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <Icon className="h-4 w-4 shrink-0" />
-                  )}
+                  <span className={`grid h-6 w-6 place-items-center rounded-lg shrink-0 ${isActive ? "bg-white/20 text-white" : isDone ? "bg-emerald-100 text-emerald-700" : s.color}`}>
+                    {isDone ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  </span>
                   <span className="whitespace-nowrap">{s.title}</span>
                 </button>
                 {i < STEPS.length - 1 && (
@@ -670,6 +715,19 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                   { value: "ready_to_move", label: "Ready to Move" },
                 ]} />
               </Field>
+            </div>
+            <div className="mb-5 flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={pickLocation}
+                disabled={geoLoading}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-50 text-brand-700 px-4 py-2 text-sm font-medium hover:bg-brand-100 transition disabled:opacity-60"
+              >
+                {geoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                {geoLoading ? "Detecting…" : "Pick my location (GPS)"}
+              </button>
+              <span className="text-xs text-ink-400">Auto-fills city &amp; locality from your device.</span>
+              {geoError && <span className="text-xs text-rose-600">{geoError}</span>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Field label="Project Name *">

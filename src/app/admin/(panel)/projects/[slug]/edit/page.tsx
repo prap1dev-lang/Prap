@@ -62,7 +62,7 @@ export default async function EditProject({ params }: Params) {
   return (
     <div className="space-y-6 max-w-5xl">
       <header>
-        <h1 className="text-3xl font-extrabold tracking-tight">Edit project</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Edit project</h1>
         <p className="mt-1 text-ink-500">Update <span className="font-semibold">{p.name}</span> — changes go live on save.</p>
       </header>
       <ProjectWizard initial={initial} />

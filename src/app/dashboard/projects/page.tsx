@@ -9,7 +9,7 @@ export const metadata = buildMetadata({ title: "Projects", path: "/dashboard/pro
 export default function Page() {
   return (
     <div className="max-w-6xl">
-      <h1 className="text-3xl font-extrabold tracking-tight">Browse projects</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Browse projects</h1>
       <p className="mt-2 text-ink-500">RERA-verified opportunities, all in one place.</p>
       <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {PROJECTS.map((p) => (

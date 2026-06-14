@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
   if (!validLink) {
     return (
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">Link expired</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Link expired</h1>
         <p className="mt-2 text-ink-700">
           This password-reset link is invalid or has expired. Please request a new one.
         </p>
@@ -103,7 +103,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight">Set a new password</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Set a new password</h1>
       <p className="mt-2 text-ink-700">Choose a strong password you'll remember.</p>
 
       <form onSubmit={submit} className="mt-6 space-y-4">

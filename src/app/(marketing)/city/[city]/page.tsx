@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { CITY_INFO, CITY_SLUGS, type CitySlug, formatINR } from "@/lib/projects";
+import { CITY_INFO, CITY_SLUGS, type CitySlug } from "@/lib/projects";
 import { listProjects } from "@/lib/projects-db";
 import { buildMetadata } from "@/lib/seo";
-import { BadgeCheck, MapPin } from "lucide-react";
+import ProjectCard from "@/components/site/ProjectCard";
 
 type Params = { params: { city: string } };
 
@@ -51,30 +50,7 @@ export default async function CityPage({ params }: Params) {
         <h2 className="h2">RERA-verified projects in {info.name}</h2>
         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {list.map((p) => (
-            <Link key={p.slug} href={`/projects/${p.slug}`} className="card overflow-hidden group hover:-translate-y-0.5 hover:shadow-lg transition">
-              <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
-                {p.cover && (
-                  <Image
-                    src={p.cover}
-                    alt={`${p.name} in ${info.name}`}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover group-hover:scale-105 transition"
-                  />
-                )}
-                <span className="absolute top-3 left-3 badge !bg-white/95 !text-ink-900">
-                  <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA
-                </span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-bold text-lg group-hover:text-brand-700 transition">{p.name}</h3>
-                <p className="text-sm text-ink-500 flex items-center gap-1 mt-1"><MapPin className="h-3.5 w-3.5" /> {p.sector}</p>
-                <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="text-ink-700">{p.configuration.join(" · ")}</span>
-                  <span className="font-bold text-brand-700">{formatINR(p.startingPrice)}+</span>
-                </div>
-              </div>
-            </Link>
+            <ProjectCard key={p.slug} p={p} />
           ))}
           {list.length === 0 && (
             <p className="text-ink-500">No projects in {info.name} yet — check back soon.</p>

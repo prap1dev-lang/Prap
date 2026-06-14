@@ -91,7 +91,7 @@ export default function RewardCalculator() {
             </span>
             <div>
               <p className="text-xs uppercase tracking-wider font-semibold text-ink-500">Projected total</p>
-              <p className="text-3xl font-extrabold text-ink-900">
+              <p className="text-2xl sm:text-3xl font-extrabold text-ink-900">
                 {calc.total.toLocaleString("en-IN")} <span className="text-brand-600">Coins</span>
               </p>
               <p className="text-sm text-ink-500">≈ ₹{calc.total.toLocaleString("en-IN")} value</p>

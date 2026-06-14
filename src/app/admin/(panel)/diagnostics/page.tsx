@@ -4,7 +4,7 @@ export default function DiagnosticsPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <header>
-        <h1 className="text-3xl font-extrabold tracking-tight">Diagnostics</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Diagnostics</h1>
         <p className="mt-2 text-ink-500">
           Coming soon: diagnostics for Firebase Phone Auth and other services.
         </p>

@@ -33,7 +33,7 @@ export default async function AdminProjects() {
     <div className="space-y-8 max-w-6xl">
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Projects</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Projects</h1>
           <p className="mt-1 text-ink-500">Properties published here appear on the home page and /projects.</p>
         </div>
         <Link href="/admin/projects/new" className="btn-primary">

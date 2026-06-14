@@ -1,11 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
-import { formatINR } from "@/lib/projects";
 import { listProjects } from "@/lib/projects-db";
 import { buildMetadata } from "@/lib/seo";
-import { BadgeCheck, MapPin, Search, X, Building2 } from "lucide-react";
+import { MapPin, Search, X } from "lucide-react";
 import NearbyButton from "./NearbyButton";
 import AmenityFilter from "./AmenityFilter";
+import ProjectCard from "@/components/site/ProjectCard";
 import { amenitiesFromIds } from "@/lib/amenities";
 
 export const metadata = buildMetadata({
@@ -43,8 +42,9 @@ export default async function ProjectsPage({
 
   return (
     <>
-      <section className="bg-ink-950 text-white">
-        <div className="container py-14 sm:py-16">
+      <section className="relative overflow-hidden bg-ink-950 text-white">
+        <div className="absolute inset-0 mesh-bg opacity-30 pointer-events-none" />
+        <div className="relative container py-14 sm:py-16">
           <span className="eyebrow !text-sage-400">Discover projects</span>
           <h1 className="font-serif text-4xl md:text-6xl font-light tracking-[-0.02em] mt-4">Find projects near you</h1>
           <p className="mt-4 text-ink-200 max-w-2xl">
@@ -83,7 +83,8 @@ export default async function ProjectsPage({
         </div>
       </section>
 
-      <section className="container py-10 sm:py-12">
+      <section className="bg-grid-fade">
+      <div className="container py-10 sm:py-12">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm text-ink-500">{list.length} project{list.length === 1 ? "" : "s"} found</p>
@@ -115,60 +116,13 @@ export default async function ProjectsPage({
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {list.map((p) => (
-            <Link
-              key={p.slug}
-              href={`/projects/${p.slug}`}
-              className="card overflow-hidden group hover:-translate-y-1 hover:shadow-soft transition-all duration-300"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden bg-paper">
-                {p.cover ? (
-                  <Image
-                    src={p.cover}
-                    alt={`${p.name} — ${p.builder} in ${p.city}`}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover hover-scale"
-                  />
-                ) : (
-                  <div className="h-full w-full grid place-items-center bg-brand-50">
-                    <Building2 className="h-10 w-10 text-brand-200" strokeWidth={1.2} />
-                  </div>
-                )}
-                <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 backdrop-blur-md px-3 py-1 text-[0.7rem] font-medium text-ink-900">
-                  <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA
-                </span>
-                <span className="absolute top-3 right-3 rounded-full bg-white/85 backdrop-blur-md px-3 py-1 text-[0.7rem] font-medium text-ink-700">{p.status}</span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-serif text-xl text-ink-900 group-hover:text-brand-700 transition-colors">{p.name}</h3>
-                <p className="text-sm text-ink-500 mt-0.5">{p.builder}</p>
-                <p className="mt-2 text-sm text-ink-700 flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" strokeWidth={1.5} /> {p.sector ? `${p.sector}, ` : ""}{p.city}
-                </p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-sm text-ink-700">{p.configuration.join(" · ")}</span>
-                  <span className="font-bold text-brand-700">{formatINR(p.startingPrice)}+</span>
-                </div>
-                {(() => {
-                  const tags = amenitiesFromIds(p.amenityTags ?? []);
-                  if (tags.length === 0) return null;
-                  return (
-                    <div className="mt-3 flex items-center gap-3 text-ink-400 border-t border-ink-100 pt-3">
-                      {tags.slice(0, 4).map((a) => {
-                        const Icon = a.icon;
-                        return <Icon key={a.id} className="h-4 w-4" aria-label={a.label} />;
-                      })}
-                      {tags.length > 4 && <span className="text-xs">+{tags.length - 4}</span>}
-                    </div>
-                  );
-                })()}
-              </div>
-            </Link>
+            <ProjectCard key={p.slug} p={p} />
           ))}
           {list.length === 0 && (
             <p className="text-ink-500 col-span-full text-center py-10">No projects match your filters.</p>
           )}
         </div>
+      </div>
       </section>
     </>
   );

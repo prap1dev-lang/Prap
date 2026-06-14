@@ -83,7 +83,7 @@ export default function HealthScoreCalculator() {
           <div className={`relative h-44 w-44 rounded-full bg-gradient-to-br ${toneRing[tone]} grid place-items-center shadow-card`}>
             <div className="h-36 w-36 rounded-full bg-white grid place-items-center">
               <div>
-                <p className="text-5xl font-extrabold text-ink-900 tabular-nums">{score}</p>
+                <p className="text-4xl sm:text-5xl font-extrabold text-ink-900 tabular-nums">{score}</p>
                 <p className="text-xs uppercase tracking-wider font-semibold text-ink-500">PHS-100</p>
               </div>
             </div>

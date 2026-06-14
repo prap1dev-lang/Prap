@@ -51,7 +51,7 @@ export default async function RedemptionsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight">Coin Redemptions</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Coin Redemptions</h1>
       <p className="mt-2 text-ink-500">Queue of user withdrawal requests. Mark as paid after sending money via UPI/NEFT.</p>
       <div className="card mt-6 overflow-x-auto">
         <table className="w-full text-sm min-w-[680px]">

@@ -40,7 +40,7 @@ export default async function BookingsPage() {
     <div className="space-y-8 max-w-5xl">
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Bookings</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Bookings</h1>
           <p className="mt-1 text-ink-500">All scheduled and completed site visits.</p>
         </div>
         <BookVisitForm projects={projects} />

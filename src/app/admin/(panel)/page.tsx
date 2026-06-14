@@ -45,7 +45,7 @@ export default async function AdminHome() {
 
   return (
     <div className="space-y-8 max-w-6xl">
-      <h1 className="text-3xl font-extrabold tracking-tight">Admin overview</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Admin overview</h1>
 
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

@@ -159,7 +159,7 @@ export default function LoginPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight">Welcome back</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Welcome back</h1>
       <p className="mt-2 text-ink-700">Sign in to your PRAP account.</p>
 
       {/* invisible reCAPTCHA container — Firebase requires a DOM node */}

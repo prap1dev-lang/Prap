@@ -42,7 +42,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: SP })
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight">Users</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Users</h1>
       <p className="mt-2 text-ink-500">Search, verify and manage every user on the platform.</p>
 
       <form className="card mt-8 overflow-hidden">

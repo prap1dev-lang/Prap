@@ -13,7 +13,7 @@ export default function WalletPage() {
     <div className="space-y-8 max-w-5xl">
       <header className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Wallet</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Wallet</h1>
           <p className="mt-1 text-ink-500">Track every coin earned, redeemed and spent.</p>
         </div>
         <Link href="/dashboard/redeem" className="btn-primary">
@@ -24,17 +24,17 @@ export default function WalletPage() {
       <section className="grid gap-5 md:grid-cols-3">
         <div className="card p-6">
           <p className="text-sm text-ink-500">Balance</p>
-          <p className="mt-2 text-3xl font-extrabold">25,000 <span className="text-brand-600">Coins</span></p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold">25,000 <span className="text-brand-600">Coins</span></p>
           <p className="text-xs text-ink-500">≈ ₹25,000</p>
         </div>
         <div className="card p-6">
           <p className="text-sm text-ink-500">Redeemable now</p>
-          <p className="mt-2 text-3xl font-extrabold">₹0</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold">₹0</p>
           <p className="text-xs text-ink-500">Unlocks after 50% property payment</p>
         </div>
         <div className="card p-6">
           <p className="text-sm text-ink-500">Lifetime earnings</p>
-          <p className="mt-2 text-3xl font-extrabold">25,000</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold">25,000</p>
           <p className="text-xs text-ink-500">Across all sources</p>
         </div>
       </section>

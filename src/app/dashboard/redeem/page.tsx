@@ -14,7 +14,7 @@ export default function RedeemPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-3xl font-extrabold tracking-tight">Redeem PRAP Coins</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Redeem PRAP Coins</h1>
       <p className="mt-2 text-ink-500">
         Withdraw up to 50% of your balance (capped at ₹1,00,000) to your bank account or UPI.
       </p>

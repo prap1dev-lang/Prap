@@ -47,7 +47,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-3xl font-extrabold tracking-tight">Profile &amp; Settings</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Profile &amp; Settings</h1>
       <p className="mt-2 text-ink-500">Manage your KYC documents, payout methods and notifications.</p>
 
       <div className="mt-8 grid gap-6">

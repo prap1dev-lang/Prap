@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight">Reset your password</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Reset your password</h1>
       <p className="mt-2 text-ink-700">
         Enter the email on your PRAP account. We'll send you a secure reset link.
       </p>

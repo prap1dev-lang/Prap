@@ -13,7 +13,7 @@ export const metadata = buildMetadata({
 export default function Page({ searchParams }: { searchParams?: { role?: string; ref?: string } }) {
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight">Create your PRAP account</h1>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Create your PRAP account</h1>
       <p className="mt-2 text-ink-700">
         Join the platform — 25,000 PRAP Coins (₹25,000) credited on signup.
       </p>

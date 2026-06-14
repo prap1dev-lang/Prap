@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Coins, Mail, Phone, MapPin } from "lucide-react";
+import { SITE } from "@/lib/seo";
 
 const columns = [
   {
@@ -54,8 +55,8 @@ export default function Footer() {
             (₹1 each) and redeem to your bank.
           </p>
           <div className="mt-5 space-y-2 text-sm text-ink-200">
-            <div className="flex items-center gap-2"><Phone className="h-4 w-4" /> +91-000-000-0000</div>
-            <div className="flex items-center gap-2"><Mail className="h-4 w-4" /> support@prap.in</div>
+            <a href={`tel:${SITE.phoneTel}`} className="flex items-center gap-2 hover:text-white"><Phone className="h-4 w-4" /> {SITE.phoneDisplay}</a>
+            <a href={`mailto:${SITE.email}`} className="flex items-center gap-2 hover:text-white"><Mail className="h-4 w-4" /> {SITE.email}</a>
             <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Sector 18, Noida, UP — India</div>
           </div>
         </div>
@@ -79,6 +80,27 @@ export default function Footer() {
             <li><Link href="#" className="hover:text-white">iOS — coming soon</Link></li>
             <li><Link href="#" className="hover:text-white">Android — coming soon</Link></li>
           </ul>
+        </div>
+      </div>
+
+      {/* Platform credit */}
+      <div className="border-t border-ink-900">
+        <div className="container py-7 text-center">
+          <p className="text-sm text-ink-200 max-w-3xl mx-auto leading-relaxed">
+            This platform is <span className="text-white font-medium">developed, imagined and researched</span> — its
+            ideology, design and product thinking — by a team from <span className="text-brand-400 font-semibold">IITs, NITs &amp; IIMs</span>.
+          </p>
+          <p className="mt-2 text-sm text-ink-300">
+            Technical team by{" "}
+            <a
+              href="https://webtroopsdevelopment.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white font-medium hover:text-brand-400 underline underline-offset-4"
+            >
+              webtroopsdevelopment.com
+            </a>
+          </p>
         </div>
       </div>
 
