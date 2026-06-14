@@ -442,14 +442,29 @@ function FileUploader({
 
 // ─── Main Wizard ──────────────────────────────────────────────────────────────
 
-export default function ProjectWizard() {
+// Data shape used to pre-fill the wizard when editing an existing project.
+export interface ProjectInitial {
+  slug: string;
+  form: Partial<FormState>;
+  cover?: UploadedFile | null;
+  gallery?: UploadedFile[];
+  floorPlans?: UploadedFile[];
+  brochure?: UploadedFile | null;
+  unitTypes?: UnitType[];
+}
+
+export default function ProjectWizard({ initial }: { initial?: ProjectInitial } = {}) {
+  const isEdit = !!initial;
+
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState<FormState>(INITIAL);
-  const [coverImages, setCoverImages] = useState<UploadedFile[]>([]);
-  const [galleryImages, setGalleryImages] = useState<UploadedFile[]>([]);
-  const [floorPlans, setFloorPlans] = useState<UploadedFile[]>([]);
-  const [brochure, setBrochure] = useState<UploadedFile[]>([]);
-  const [unitTypes, setUnitTypes] = useState<UnitType[]>([{ ...EMPTY_UNIT }]);
+  const [form, setForm] = useState<FormState>({ ...INITIAL, ...(initial?.form ?? {}) });
+  const [coverImages, setCoverImages] = useState<UploadedFile[]>(initial?.cover ? [initial.cover] : []);
+  const [galleryImages, setGalleryImages] = useState<UploadedFile[]>(initial?.gallery ?? []);
+  const [floorPlans, setFloorPlans] = useState<UploadedFile[]>(initial?.floorPlans ?? []);
+  const [brochure, setBrochure] = useState<UploadedFile[]>(initial?.brochure ? [initial.brochure] : []);
+  const [unitTypes, setUnitTypes] = useState<UnitType[]>(
+    initial?.unitTypes && initial.unitTypes.length ? initial.unitTypes : [{ ...EMPTY_UNIT }],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -495,13 +510,16 @@ export default function ProjectWizard() {
         // Only send rows that have at least a configuration selected.
         unitTypes: unitTypes.filter((u) => u.config.trim() !== ""),
       };
-      const res = await fetch("/api/admin/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        isEdit ? `/api/admin/projects/${initial!.slug}` : "/api/admin/projects",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       const body = await res.json();
-      if (!res.ok || !body.ok) throw new Error(body.error || "Failed to create project");
+      if (!res.ok || !body.ok) throw new Error(body.error || `Failed to ${isEdit ? "update" : "create"} project`);
       setDone(true);
     } catch (e: any) {
       setSubmitError(e?.message || "Submission failed");
@@ -514,11 +532,15 @@ export default function ProjectWizard() {
     return (
       <div className="card p-12 text-center space-y-4">
         <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
-        <h2 className="text-2xl font-extrabold text-ink-900">Project created!</h2>
+        <h2 className="text-2xl font-extrabold text-ink-900">{isEdit ? "Project updated!" : "Project created!"}</h2>
         <p className="text-ink-500">The project has been saved and {form.isListed ? "published" : "saved as draft"}.</p>
         <div className="flex gap-3 justify-center pt-2">
           <a href="/admin/projects" className="btn-primary">Back to projects</a>
-          <button onClick={() => { setForm(INITIAL); setStep(1); setDone(false); }} className="btn-outline">Add another</button>
+          {isEdit ? (
+            <a href={`/admin/projects/${initial!.slug}`} className="btn-outline">View details</a>
+          ) : (
+            <button onClick={() => { setForm(INITIAL); setStep(1); setDone(false); }} className="btn-outline">Add another</button>
+          )}
         </div>
       </div>
     );
@@ -1105,7 +1127,7 @@ export default function ProjectWizard() {
                 disabled={submitting || !form.name || !form.builder || !form.reraNumber}
                 className="btn-primary flex-1 sm:flex-none justify-center"
               >
-                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save & Publish"}
+                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : isEdit ? "Update Project" : "Save & Publish"}
               </button>
             )}
           </div>

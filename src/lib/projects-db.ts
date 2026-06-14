@@ -37,6 +37,7 @@ function rowToProject(r: any): Project {
     description: r.description || "",
     status: statusMap[r.status as string] || "Under Construction",
     unitTypes: Array.isArray(r.meta?.unitTypes) ? r.meta.unitTypes : [],
+    meta: r.meta || {},
   };
 }
 

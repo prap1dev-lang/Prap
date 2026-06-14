@@ -4,6 +4,7 @@ import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
 import { Plus, ExternalLink } from "lucide-react";
+import DeleteProjectButton from "./[slug]/DeleteProjectButton";
 
 export const metadata = buildMetadata({ title: "Projects · Admin", path: "/admin/projects", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ export default async function AdminProjects() {
               <th className="px-5 py-3 text-left">RERA</th>
               <th className="px-5 py-3 text-right">Starting</th>
               <th className="px-5 py-3 text-left">Listed</th>
-              <th className="px-5 py-3 text-right">Open</th>
+              <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -87,9 +88,18 @@ export default async function AdminProjects() {
                   </form>
                 </td>
                 <td className="px-5 py-3 text-right">
-                  <Link href={`/projects/${p.slug}`} target="_blank" className="btn-outline !py-1.5 !px-3 text-xs">
-                    View <ExternalLink className="h-3 w-3" />
-                  </Link>
+                  <div className="inline-flex gap-2">
+                    <Link href={`/admin/projects/${p.slug}/edit`} className="btn-primary !py-1.5 !px-3 text-xs">
+                      Edit
+                    </Link>
+                    <Link href={`/admin/projects/${p.slug}`} className="btn-outline !py-1.5 !px-3 text-xs">
+                      Details
+                    </Link>
+                    <Link href={`/projects/${p.slug}`} target="_blank" className="btn-outline !py-1.5 !px-3 text-xs">
+                      View <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    <DeleteProjectButton slug={p.slug} name={p.name} />
+                  </div>
                 </td>
               </tr>
             ))}

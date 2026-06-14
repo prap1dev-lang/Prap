@@ -17,6 +17,9 @@ export type Project = {
   status: "Under Construction" | "Ready to Move" | "New Launch";
   // BHK-wise unit types (optional — present on DB-backed projects).
   unitTypes?: UnitType[];
+  // All extended fields captured by the admin form, stored in the DB `meta`
+  // JSONB column (legal, pricing, specs, location, investment, safety, …).
+  meta?: Record<string, any>;
 };
 
 export type UnitType = {
