@@ -26,7 +26,11 @@
       "Bash(npx next *)",
       "PowerShell(\"removed dashboard explore + nav lib\")",
       "Bash(firebase login:list)",
-      "Bash(firebase --version)"
+      "Bash(firebase --version)",
+      "Bash(firebase deploy *)",
+      "Bash(node verify-brochure-upload.mjs)",
+      "Bash(node cleanup-test.mjs)",
+      "Bash(rm -f cleanup-test.mjs)"
     ],
     "additionalDirectories": [
       "\\tmp"

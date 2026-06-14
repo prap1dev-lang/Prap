@@ -11,20 +11,19 @@ service firebase.storage {
       return request.auth != null && request.auth.token.admin == true;
     }
 
-    // Project brochures — public read, admin-only write (PDF, max 25 MB).
+    // Project brochures — public read, admin-only write (PDF, no size limit).
     match /projects/brochures/{fileName} {
       allow read: if true;
       allow write: if isAdmin()
-        && request.resource.size < 25 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
       allow delete: if isAdmin();
     }
 
     // Any other project assets uploaded directly to Firebase — public read,
-    // admin-only write (max 25 MB).
+    // admin-only write.
     match /projects/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin() && request.resource.size < 25 * 1024 * 1024;
+      allow write: if isAdmin();
       allow delete: if isAdmin();
     }
 
