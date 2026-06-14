@@ -24,7 +24,9 @@
       "Bash(echo \"exit=$?\")",
       "PowerShell(\"cleaned\")",
       "Bash(npx next *)",
-      "PowerShell(\"removed dashboard explore + nav lib\")"
+      "PowerShell(\"removed dashboard explore + nav lib\")",
+      "Bash(firebase login:list)",
+      "Bash(firebase --version)"
     ],
     "additionalDirectories": [
       "\\tmp"

@@ -29,16 +29,20 @@ export async function uploadToCloudinary(
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
+  const resourceType = options.resourceType ?? "auto";
+  // quality/fetch_format are image-only transforms — applying them to raw
+  // assets (e.g. PDF brochures) corrupts or fails the upload.
+  const isImage = resourceType === "image" || resourceType === "auto";
+
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: options.folder ?? "prap/projects",
-        resource_type: options.resourceType ?? "auto",
+        resource_type: resourceType,
         use_filename: false,
         unique_filename: true,
         overwrite: false,
-        quality: "auto",
-        fetch_format: "auto",
+        ...(isImage ? { quality: "auto", fetch_format: "auto" } : {}),
       },
       (err, result) => {
         if (err || !result) return reject(err ?? new Error("Cloudinary upload failed"));

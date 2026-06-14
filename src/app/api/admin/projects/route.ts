@@ -94,6 +94,21 @@ const Body = z.object({
   gallery: z.array(z.string()).optional().default([]),
   floorPlans: z.array(z.string()).optional().default([]),
   brochureUrl: z.string().nullable().optional(),
+
+  // BHK-wise unit types (multiple per property)
+  unitTypes: z
+    .array(
+      z.object({
+        config: z.string().optional().default(""),
+        superArea: z.string().optional().default(""),
+        carpetArea: z.string().optional().default(""),
+        bathrooms: z.string().optional().default(""),
+        balconyArea: z.string().optional().default(""),
+        price: z.string().optional().default(""),
+      }),
+    )
+    .optional()
+    .default([]),
 });
 
 function slugify(s: string) {
@@ -115,7 +130,12 @@ export async function POST(req: Request) {
   const d = parsed.data;
   const slug = slugify(`${d.name}-${d.city}`);
 
-  const configList = d.configurations.split(",").map((s: string) => s.trim()).filter(Boolean);
+  const configList = Array.from(
+    new Set([
+      ...d.configurations.split(",").map((s: string) => s.trim()).filter(Boolean),
+      ...d.unitTypes.map((u) => u.config.trim()).filter(Boolean),
+    ]),
+  );
   const highlightList = d.highlights.split(",").map((s: string) => s.trim()).filter(Boolean);
   const amenityList = [
     d.clubhouseDetails, d.swimmingPool, d.gymnasium, d.sportsFacilities,
@@ -202,6 +222,7 @@ export async function POST(req: Request) {
       exitResalePolicy: d.exitResalePolicy,
       floorPlans: d.floorPlans,
       brochureUrl: d.brochureUrl,
+      unitTypes: d.unitTypes,
     },
   });
 

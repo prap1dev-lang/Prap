@@ -127,6 +127,38 @@ export default async function ProjectPage({ params }: Params) {
                 </div>
               </div>
 
+              {p.unitTypes && p.unitTypes.length > 0 && (
+                <div className="card p-6">
+                  <h2 className="text-xl font-bold">Unit types &amp; pricing</h2>
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-ink-500 border-b border-ink-100">
+                          <th className="py-2 pr-4 font-semibold">Configuration</th>
+                          <th className="py-2 pr-4 font-semibold">Super Area</th>
+                          <th className="py-2 pr-4 font-semibold">Carpet Area</th>
+                          <th className="py-2 pr-4 font-semibold">Bath</th>
+                          <th className="py-2 pr-4 font-semibold whitespace-nowrap">Starting Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {p.unitTypes.map((u, i) => (
+                          <tr key={i} className="border-b border-ink-50 last:border-0">
+                            <td className="py-2.5 pr-4 font-semibold text-ink-900 whitespace-nowrap">{u.config}</td>
+                            <td className="py-2.5 pr-4 text-ink-700">{u.superArea ? `${u.superArea} sq.ft.` : "—"}</td>
+                            <td className="py-2.5 pr-4 text-ink-700">{u.carpetArea ? `${u.carpetArea} sq.ft.` : "—"}</td>
+                            <td className="py-2.5 pr-4 text-ink-700">{u.bathrooms || "—"}</td>
+                            <td className="py-2.5 pr-4 font-semibold text-brand-700 whitespace-nowrap">
+                              {u.price ? formatINR(Number(u.price)) : "On request"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {p.description && (
                 <div className="card p-6">
                   <h2 className="text-xl font-bold">About {p.name}</h2>

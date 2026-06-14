@@ -36,6 +36,7 @@ function rowToProject(r: any): Project {
     gallery: r.gallery || [],
     description: r.description || "",
     status: statusMap[r.status as string] || "Under Construction",
+    unitTypes: Array.isArray(r.meta?.unitTypes) ? r.meta.unitTypes : [],
   };
 }
 

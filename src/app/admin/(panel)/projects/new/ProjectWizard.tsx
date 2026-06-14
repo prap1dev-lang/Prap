@@ -14,6 +14,20 @@ interface UploadedFile {
   publicId: string;
 }
 
+// A single BHK-wise unit type within a project (multiple per property).
+interface UnitType {
+  config: string;       // e.g. "2 BHK", "3 BHK", "1 RK"
+  superArea: string;    // sq.ft.
+  carpetArea: string;   // sq.ft.
+  bathrooms: string;
+  balconyArea: string;
+  price: string;        // starting price for this type (₹)
+}
+
+const EMPTY_UNIT: UnitType = {
+  config: "", superArea: "", carpetArea: "", bathrooms: "", balconyArea: "", price: "",
+};
+
 interface FormState {
   // Step 1 — Basic Information
   name: string;
@@ -134,14 +148,15 @@ const INITIAL: FormState = {
 
 // ─── Steps definition ─────────────────────────────────────────────────────────
 
+// Step sequence modelled on 99acres' "Post Property" flow.
 const STEPS = [
-  { id: 1, title: "Basic Info", icon: Building2 },
-  { id: 2, title: "Legal & Approvals", icon: Scale },
-  { id: 3, title: "Apartment Details", icon: Home },
-  { id: 4, title: "Pricing & Payment", icon: DollarSign },
+  { id: 1, title: "Basic Details", icon: Building2 },
+  { id: 2, title: "Legal & RERA", icon: Scale },
+  { id: 3, title: "Property Profile", icon: Home },
+  { id: 4, title: "Pricing & Charges", icon: DollarSign },
   { id: 5, title: "Amenities", icon: Star },
-  { id: 6, title: "Location & Investment", icon: MapPin },
-  { id: 7, title: "Safety & Media", icon: ShieldCheck },
+  { id: 6, title: "Locality & Investment", icon: MapPin },
+  { id: 7, title: "Photos & Publish", icon: ShieldCheck },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -197,30 +212,162 @@ function Select({ value, onChange, options }: {
   );
 }
 
+// Predefined unit-size / configuration options for projects.
+const CONFIG_OPTIONS = [
+  "1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK",
+  "Penthouse", "Duplex", "Villa", "Bungalow", "Studio Apartment",
+  "Shop / Retail", "Office Space", "Plot",
+];
+
+/** Single-select button group (99acres-style chooser). */
+function ButtonGroup({ value, onChange, options }: {
+  value: string; onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
+              active
+                ? "bg-brand-50 border-brand-500 text-brand-700 ring-1 ring-brand-500"
+                : "bg-white border-ink-200 text-ink-600 hover:border-brand-400"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Multi-select chip group. Stores selection as a comma-separated string. */
+function MultiSelectChips({ value, onChange, options }: {
+  value: string; onChange: (v: string) => void; options: string[];
+}) {
+  const selected = value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  function toggle(opt: string) {
+    const next = selected.includes(opt)
+      ? selected.filter((s) => s !== opt)
+      : [...selected, opt];
+    onChange(next.join(", "));
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => {
+        const active = selected.includes(opt);
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => toggle(opt)}
+            className={`px-3 py-1.5 rounded-full text-sm border transition ${
+              active
+                ? "bg-brand-500 border-brand-500 text-white"
+                : "bg-white border-ink-200 text-ink-600 hover:border-brand-400"
+            }`}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Circular completion indicator (0–100%). */
+function CircularProgress({ percent, size = 56, stroke = 6 }: {
+  percent: number; size?: number; stroke?: number;
+}) {
+  const radius = (size - stroke) / 2;
+  const circ = 2 * Math.PI * radius;
+  const offset = circ - (Math.min(100, Math.max(0, percent)) / 100) * circ;
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="currentColor" strokeWidth={stroke}
+          className="text-ink-100"
+        />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="currentColor" strokeWidth={stroke}
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+          className="text-brand-600 transition-all duration-500"
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-ink-800">
+        {percent}%
+      </span>
+    </div>
+  );
+}
+
 // ─── Image/PDF uploader ───────────────────────────────────────────────────────
 
 function FileUploader({
-  label, hint, accept, multiple = false, folder, files, onChange,
+  label, hint, accept, multiple = false, folder, files, onChange, useFirebase = false,
 }: {
   label: string; hint?: string; accept: string; multiple?: boolean;
   folder: string; files: UploadedFile[]; onChange: (files: UploadedFile[]) => void;
+  // Upload directly to Firebase Storage from the browser (bypasses the API
+  // request-body size limit — use for large files like PDF brochures).
+  useFirebase?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   async function handleFiles(picked: FileList | null) {
     if (!picked || picked.length === 0) return;
     setError(null);
     setUploading(true);
+    setProgress(0);
     try {
       const results: UploadedFile[] = [];
       for (const file of Array.from(picked)) {
+        if (useFirebase) {
+          const { uploadToFirebase } = await import("@/lib/firebase-upload");
+          const r = await uploadToFirebase(file, folder, setProgress);
+          results.push({ name: r.name, url: r.url, publicId: r.path });
+          continue;
+        }
+
+        const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
         const fd = new FormData();
         fd.append("file", file);
         fd.append("folder", folder);
+        if (isPdf) fd.append("type", "raw");
         const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-        const body = await res.json();
+
+        // The server may return a non-JSON error (e.g. a plain-text
+        // "Request Entity Too Large" when the file exceeds the body limit),
+        // which would make res.json() throw "Unexpected token R…".
+        const raw = await res.text();
+        let body: any;
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          throw new Error(
+            res.status === 413
+              ? "File is too large to upload."
+              : raw.trim() || `Upload failed (HTTP ${res.status})`,
+          );
+        }
+
         if (!res.ok || !body.ok) throw new Error(body.error || "Upload failed");
         results.push({ name: file.name, url: body.url, publicId: body.publicId });
       }
@@ -246,7 +393,8 @@ function FileUploader({
       >
         {uploading ? (
           <div className="flex items-center justify-center gap-2 text-ink-500 text-sm py-2">
-            <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {useFirebase && progress > 0 ? `Uploading… ${progress}%` : "Uploading…"}
           </div>
         ) : (
           <div className="flex items-center justify-center gap-2 text-ink-500 text-sm py-2">
@@ -301,12 +449,38 @@ export default function ProjectWizard() {
   const [galleryImages, setGalleryImages] = useState<UploadedFile[]>([]);
   const [floorPlans, setFloorPlans] = useState<UploadedFile[]>([]);
   const [brochure, setBrochure] = useState<UploadedFile[]>([]);
+  const [unitTypes, setUnitTypes] = useState<UnitType[]>([{ ...EMPTY_UNIT }]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   const set = (k: keyof FormState) => (v: string | boolean) =>
     setForm((f) => ({ ...f, [k]: v }));
+
+  // ── BHK-wise unit type rows ──
+  const addUnitType = () => setUnitTypes((rows) => [...rows, { ...EMPTY_UNIT }]);
+  const removeUnitType = (i: number) =>
+    setUnitTypes((rows) => (rows.length === 1 ? rows : rows.filter((_, idx) => idx !== i)));
+  const setUnitField = (i: number, k: keyof UnitType) => (v: string) =>
+    setUnitTypes((rows) => rows.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
+
+  // Overall completion: share of fillable fields that have a value, including
+  // the four media uploads. `isListed` is a default toggle and not counted.
+  const completion = (() => {
+    const textFields = Object.entries(form).filter(([k]) => k !== "isListed");
+    const filledText = textFields.filter(
+      ([, v]) => typeof v === "string" && v.trim() !== "",
+    ).length;
+    const media = [
+      coverImages.length > 0,
+      galleryImages.length > 0,
+      floorPlans.length > 0,
+      brochure.length > 0,
+    ];
+    const filledMedia = media.filter(Boolean).length;
+    const total = textFields.length + media.length;
+    return Math.round(((filledText + filledMedia) / total) * 100);
+  })();
 
   async function submit() {
     setSubmitError(null);
@@ -318,6 +492,8 @@ export default function ProjectWizard() {
         gallery: galleryImages.map((f) => f.url),
         floorPlans: floorPlans.map((f) => f.url),
         brochureUrl: brochure[0]?.url ?? null,
+        // Only send rows that have at least a configuration selected.
+        unitTypes: unitTypes.filter((u) => u.config.trim() !== ""),
       };
       const res = await fetch("/api/admin/projects", {
         method: "POST",
@@ -351,8 +527,17 @@ export default function ProjectWizard() {
   return (
     <div className="space-y-6">
       {/* Step progress bar */}
-      <div className="card p-4">
-        <div className="flex items-center gap-1 overflow-x-auto">
+      <div className="card p-4 flex items-center gap-4">
+        <div className="flex-1 min-w-0">
+        {/* Mobile: compact current-step label */}
+        <div className="sm:hidden flex items-center justify-between">
+          <span className="text-sm font-bold text-ink-900">
+            {STEPS.find((s) => s.id === step)?.title}
+          </span>
+          <span className="text-xs font-medium text-ink-400">Step {step} / {STEPS.length}</span>
+        </div>
+        {/* Desktop: full step list */}
+        <div className="hidden sm:flex items-center gap-1 overflow-x-auto">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const isActive = step === s.id;
@@ -375,8 +560,7 @@ export default function ProjectWizard() {
                   ) : (
                     <Icon className="h-4 w-4 shrink-0" />
                   )}
-                  <span className="hidden sm:inline whitespace-nowrap">{s.title}</span>
-                  <span className="sm:hidden">{s.id}</span>
+                  <span className="whitespace-nowrap">{s.title}</span>
                 </button>
                 {i < STEPS.length - 1 && (
                   <ChevronRight className={`h-4 w-4 shrink-0 ${isDone ? "text-emerald-400" : "text-ink-200"}`} />
@@ -391,14 +575,36 @@ export default function ProjectWizard() {
             style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
           />
         </div>
+        </div>
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <CircularProgress percent={completion} />
+          <span className="text-[10px] font-medium text-ink-400 whitespace-nowrap">Completed</span>
+        </div>
       </div>
 
       {/* Step panels */}
-      <div className="card p-6 md:p-8">
+      <div className="card p-6 md:p-8 flex flex-col">
         {/* ── STEP 1: Basic Information ── */}
         {step === 1 && (
-          <StepShell title="Project Basic Information" subtitle="Core details about the project.">
-            <div className="grid sm:grid-cols-2 gap-5">
+          <StepShell title="Basic Details" subtitle="Tell us about your project — like posting on 99acres.">
+            <div className="mb-6 space-y-5">
+              <Field label="Property Type *" hint="What kind of project is this?">
+                <ButtonGroup value={form.projectType} onChange={set("projectType")} options={[
+                  { value: "Residential", label: "Residential" },
+                  { value: "Commercial", label: "Commercial" },
+                  { value: "Mixed Use", label: "Mixed Use" },
+                  { value: "Plots", label: "Plots / Villas" },
+                ]} />
+              </Field>
+              <Field label="Project Status *" hint="Current construction stage">
+                <ButtonGroup value={form.status} onChange={set("status")} options={[
+                  { value: "new_launch", label: "Pre-launch / New Launch" },
+                  { value: "under_construction", label: "Under Construction" },
+                  { value: "ready_to_move", label: "Ready to Move" },
+                ]} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Field label="Project Name *">
                 <Input value={form.name} onChange={set("name")} placeholder="e.g. VVIP Namah" />
               </Field>
@@ -421,14 +627,6 @@ export default function ProjectWizard() {
               <Field label="Sector / Locality">
                 <Input value={form.sector} onChange={set("sector")} placeholder="Sector 16C" />
               </Field>
-              <Field label="Project Type *">
-                <Select value={form.projectType} onChange={set("projectType")} options={[
-                  { value: "Residential", label: "Residential" },
-                  { value: "Commercial", label: "Commercial" },
-                  { value: "Mixed Use", label: "Mixed Use" },
-                  { value: "Plots", label: "Plots / Villas" },
-                ]} />
-              </Field>
               <Field label="Total Land Area">
                 <Input value={form.totalLandArea} onChange={set("totalLandArea")} placeholder="e.g. 10 acres" />
               </Field>
@@ -440,13 +638,6 @@ export default function ProjectWizard() {
               </Field>
               <Field label="Total Number of Units">
                 <Input value={form.totalUnits} onChange={set("totalUnits")} placeholder="e.g. 800" type="number" />
-              </Field>
-              <Field label="Project Status *">
-                <Select value={form.status} onChange={set("status")} options={[
-                  { value: "new_launch", label: "Pre-launch / New Launch" },
-                  { value: "under_construction", label: "Under Construction" },
-                  { value: "ready_to_move", label: "Ready to Move" },
-                ]} />
               </Field>
             </div>
           </StepShell>
@@ -496,10 +687,79 @@ export default function ProjectWizard() {
         {/* ── STEP 3: Apartment Details ── */}
         {step === 3 && (
           <StepShell title="Apartment Details" subtitle="Unit types, sizes and specifications.">
-            <div className="grid sm:grid-cols-2 gap-5">
-              <Field label="Unit Configurations *" hint="Comma-separated: 2 BHK, 3 BHK, 4 BHK">
-                <Input value={form.configurations} onChange={set("configurations")} placeholder="2 BHK, 3 BHK, 4 BHK" />
-              </Field>
+            <Field label="Unit Configurations / Sizes *" hint="Select all the BHK types and unit sizes available in this project">
+              <MultiSelectChips
+                value={form.configurations}
+                onChange={set("configurations")}
+                options={CONFIG_OPTIONS}
+              />
+            </Field>
+
+            {/* BHK-wise unit types — add multiple per property */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="label">Unit Types (BHK-wise)</label>
+                  <p className="text-xs text-ink-400 mb-1">
+                    Add each apartment type separately with its own area & price.
+                  </p>
+                </div>
+                <button type="button" onClick={addUnitType} className="btn-outline text-sm py-1.5 px-3">
+                  + Add unit type
+                </button>
+              </div>
+
+              <div className="space-y-4 mt-3">
+                {unitTypes.map((u, i) => (
+                  <div key={i} className="rounded-xl border border-ink-200 p-4 relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-semibold text-ink-600">
+                        {u.config || `Unit type ${i + 1}`}
+                      </span>
+                      {unitTypes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeUnitType(i)}
+                          className="text-rose-500 hover:text-rose-700"
+                          aria-label="Remove unit type"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <Field label="Configuration">
+                        <Select
+                          value={u.config}
+                          onChange={setUnitField(i, "config")}
+                          options={[
+                            { value: "", label: "Select…" },
+                            ...CONFIG_OPTIONS.map((c) => ({ value: c, label: c })),
+                          ]}
+                        />
+                      </Field>
+                      <Field label="Super Area (sq.ft.)">
+                        <Input value={u.superArea} onChange={setUnitField(i, "superArea")} placeholder="e.g. 1450" />
+                      </Field>
+                      <Field label="Carpet Area (sq.ft.)">
+                        <Input value={u.carpetArea} onChange={setUnitField(i, "carpetArea")} placeholder="e.g. 1100" />
+                      </Field>
+                      <Field label="Bathrooms">
+                        <Input value={u.bathrooms} onChange={setUnitField(i, "bathrooms")} placeholder="e.g. 2" type="number" />
+                      </Field>
+                      <Field label="Balcony Area (sq.ft.)">
+                        <Input value={u.balconyArea} onChange={setUnitField(i, "balconyArea")} placeholder="e.g. 120" />
+                      </Field>
+                      <Field label="Starting Price (₹)">
+                        <Input value={u.price} onChange={setUnitField(i, "price")} placeholder="e.g. 9500000" type="number" />
+                      </Field>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-5 mt-5">
               <Field label="Super Area Range (sq.ft.)" hint="e.g. 1050–2100 sq.ft.">
                 <Input value={form.superArea} onChange={set("superArea")} placeholder="1050–2100 sq.ft." />
               </Field>
@@ -772,12 +1032,30 @@ export default function ProjectWizard() {
               />
               <FileUploader
                 label="PDF Brochure"
-                hint="Official project brochure — shown as download on detail page"
+                hint="Official project brochure — shown as download on detail page (uploaded directly to Firebase, no size limit)"
                 accept=".pdf"
-                folder="prap/projects/brochures"
+                folder="projects/brochures"
                 files={brochure}
                 onChange={setBrochure}
+                useFirebase
               />
+            </div>
+
+            {/* Review summary — confirm before publishing (99acres-style) */}
+            <div className="mt-8 rounded-xl border border-ink-200 bg-ink-50/50 p-4">
+              <h3 className="font-bold text-ink-900 mb-3">Review your listing</h3>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <ReviewItem label="Project" value={form.name} />
+                <ReviewItem label="Builder" value={form.builder} />
+                <ReviewItem label="Type" value={form.projectType} />
+                <ReviewItem label="City" value={[form.sector, form.city].filter(Boolean).join(", ")} />
+                <ReviewItem label="Configurations" value={form.configurations} />
+                <ReviewItem label="Unit types added" value={String(unitTypes.filter((u) => u.config).length)} />
+                <ReviewItem label="Starting price" value={form.startingPrice ? `₹${Number(form.startingPrice).toLocaleString("en-IN")}` : ""} />
+                <ReviewItem label="RERA" value={form.reraNumber} />
+                <ReviewItem label="Cover image" value={coverImages.length ? "Uploaded" : "Missing"} />
+                <ReviewItem label="Brochure" value={brochure.length ? "Uploaded" : "—"} />
+              </dl>
             </div>
 
             <div className="mt-6">
@@ -800,35 +1078,37 @@ export default function ProjectWizard() {
           </StepShell>
         )}
 
-        {/* Navigation */}
-        <div className="mt-8 flex items-center justify-between gap-3 border-t border-ink-100 pt-6">
-          <button
-            type="button"
-            onClick={() => setStep((s) => Math.max(1, s - 1))}
-            className="btn-outline"
-            disabled={step === 1}
-          >
-            <ChevronLeft className="h-4 w-4" /> Back
-          </button>
-          <span className="text-xs text-ink-400 font-medium">Step {step} of {STEPS.length}</span>
-          {step < STEPS.length ? (
+        {/* Navigation — sticky bottom bar on mobile, inline on desktop */}
+        <div className="mt-8 border-t border-ink-100 pt-6 sticky bottom-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 -mx-6 px-6 md:-mx-8 md:px-8 pb-4 md:pb-0 md:static md:bg-transparent md:backdrop-blur-none">
+          <div className="flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setStep((s) => Math.min(STEPS.length, s + 1))}
-              className="btn-primary"
+              onClick={() => setStep((s) => Math.max(1, s - 1))}
+              className="btn-outline flex-1 sm:flex-none justify-center"
+              disabled={step === 1}
             >
-              Next <ChevronRight className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" /> Back
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={submit}
-              disabled={submitting || !form.name || !form.builder || !form.reraNumber}
-              className="btn-primary"
-            >
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Create Project"}
-            </button>
-          )}
+            <span className="hidden sm:inline text-xs text-ink-400 font-medium">Step {step} of {STEPS.length}</span>
+            {step < STEPS.length ? (
+              <button
+                type="button"
+                onClick={() => setStep((s) => Math.min(STEPS.length, s + 1))}
+                className="btn-primary flex-1 sm:flex-none justify-center"
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={submit}
+                disabled={submitting || !form.name || !form.builder || !form.reraNumber}
+                className="btn-primary flex-1 sm:flex-none justify-center"
+              >
+                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save & Publish"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -839,12 +1119,23 @@ export default function ProjectWizard() {
 
 function StepShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="flex-1">
       <div className="mb-6">
-        <h2 className="text-xl font-extrabold text-ink-900">{title}</h2>
-        {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}
+        <h2 className="text-lg sm:text-xl font-extrabold text-ink-900">{title}</h2>
+        {subtitle && <p className="mt-1 text-xs sm:text-sm text-ink-500">{subtitle}</p>}
       </div>
       {children}
+    </div>
+  );
+}
+
+function ReviewItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3 border-b border-ink-100 py-1.5">
+      <dt className="text-ink-500">{label}</dt>
+      <dd className={`font-medium text-right ${value && value !== "Missing" ? "text-ink-900" : "text-ink-400"}`}>
+        {value || "—"}
+      </dd>
     </div>
   );
 }

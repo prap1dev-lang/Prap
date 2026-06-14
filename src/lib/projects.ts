@@ -15,6 +15,17 @@ export type Project = {
   gallery: string[];
   description: string;
   status: "Under Construction" | "Ready to Move" | "New Launch";
+  // BHK-wise unit types (optional — present on DB-backed projects).
+  unitTypes?: UnitType[];
+};
+
+export type UnitType = {
+  config: string;
+  superArea?: string;
+  carpetArea?: string;
+  bathrooms?: string;
+  balconyArea?: string;
+  price?: string;
 };
 
 export const PROJECTS: Project[] = [
