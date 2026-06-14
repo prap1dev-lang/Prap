@@ -31,10 +31,17 @@
       "Bash(node verify-brochure-upload.mjs)",
       "Bash(node cleanup-test.mjs)",
       "Bash(rm -f cleanup-test.mjs)",
-      "Bash(curl -s \"https://maps.googleapis.com/maps/api/geocode/json?latlng=28.5708,77.3260&key=AIzaSyA8MRze6A1WChUQJzuBd8v6w7DfszXvd9w&language=en&region=in\")"
+      "Bash(curl -s \"https://maps.googleapis.com/maps/api/geocode/json?latlng=28.5708,77.3260&key=AIzaSyA8MRze6A1WChUQJzuBd8v6w7DfszXvd9w&language=en&region=in\")",
+      "Bash(ls -R src/app/api/admin/users)",
+      "Bash(ls src/lib/admin-users.ts)",
+      "Bash(cd d:/websitem/Prap && sed -i 's/text-lg sm:text-xl font-bold/font-serif text-xl sm:text-2xl font-light/g' \"src/app/\\(marketing\\)/projects/[slug]/page.tsx\" && grep -c 'font-serif text-xl sm:text-2xl font-light' \"src/app/\\(marketing\\)/projects/[slug]/page.tsx\")",
+      "Bash(rm -rf .next-verify)",
+      "Bash(NEXT_TELEMETRY_DISABLED=1 timeout 300 npx next build --no-lint)",
+      "Bash(NEXT_TELEMETRY_DISABLED=1 npx next build --no-lint)"
     ],
     "additionalDirectories": [
-      "\\tmp"
+      "\\tmp",
+      "D:\\websitem\\Prap\\src\\app\\(marketing)\\projects\\[slug]"
     ]
   }
 }

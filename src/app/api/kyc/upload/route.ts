@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToCloudinary, destroyCloudinaryUrl } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +92,17 @@ export async function DELETE(req: Request) {
   }
 
   const admin = supabaseAdmin();
+
+  // Purge the actual Cloudinary file(s) for this kind before removing records.
+  const { data: existing } = await admin
+    .from("kyc_docs")
+    .select("storage_key")
+    .eq("user_id", me.authId)
+    .eq("kind", kind);
+  for (const d of existing ?? []) {
+    if (d.storage_key) await destroyCloudinaryUrl(d.storage_key);
+  }
+
   const { error } = await admin
     .from("kyc_docs")
     .delete()

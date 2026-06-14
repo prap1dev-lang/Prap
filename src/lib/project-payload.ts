@@ -93,6 +93,9 @@ export const ProjectBody = z.object({
   floorPlans: z.array(z.string()).optional().default([]),
   brochureUrl: z.string().nullable().optional(),
 
+  // Selected amenity tag ids (from the amenities catalogue)
+  amenityTags: z.array(z.string()).optional().default([]),
+
   // BHK-wise unit types (multiple per property)
   unitTypes: z
     .array(
@@ -207,6 +210,7 @@ export function buildProjectRow(d: ProjectPayload) {
       floorPlans: d.floorPlans,
       brochureUrl: d.brochureUrl,
       unitTypes: d.unitTypes,
+      amenityTags: d.amenityTags,
     },
   };
 }

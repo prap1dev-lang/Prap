@@ -47,7 +47,7 @@ export default function ServicesMenu() {
                     <col.icon className="h-3.5 w-3.5" strokeWidth={1.6} /> {col.title}
                   </p>
                   <ul className="mt-3 space-y-1.5">
-                    {col.items.slice(0, 6).map((it) => (
+                    {col.items.map((it) => (
                       <li key={it.label}>
                         <Link
                           href={it.href}
@@ -58,11 +58,6 @@ export default function ServicesMenu() {
                         </Link>
                       </li>
                     ))}
-                    {col.items.length > 6 && (
-                      <li>
-                        <span className="text-[0.72rem] text-ink-400 normal-case tracking-normal">+{col.items.length - 6} more</span>
-                      </li>
-                    )}
                   </ul>
                 </div>
               ))}

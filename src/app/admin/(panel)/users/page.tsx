@@ -27,7 +27,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: SP })
 
   let query = sb
     .from("users")
-    .select("id, name, role, phone, email, rera_number, kyc_status, created_at")
+    .select("id, name, role, phone, email, rera_number, kyc_status, created_at, photo_url")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -79,8 +79,20 @@ export default async function UsersPage({ searchParams }: { searchParams?: SP })
             {(users ?? []).map((u) => (
               <tr key={u.id} className="border-t border-ink-100">
                 <td className="px-5 py-3">
-                  <p className="font-semibold">{u.name}</p>
-                  <p className="text-xs text-ink-500">{u.email}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="h-9 w-9 rounded-full overflow-hidden bg-ink-100 grid place-items-center flex-none text-ink-400 text-xs font-bold">
+                      {u.photo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.photo_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        (u.name || "?").slice(0, 1).toUpperCase()
+                      )}
+                    </span>
+                    <div>
+                      <p className="font-semibold">{u.name}</p>
+                      <p className="text-xs text-ink-500">{u.email}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-5 py-3 capitalize">{u.role}</td>
                 <td className="px-5 py-3 font-mono text-xs">{u.phone}</td>

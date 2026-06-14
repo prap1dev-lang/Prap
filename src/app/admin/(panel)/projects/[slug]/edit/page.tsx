@@ -56,6 +56,7 @@ export default async function EditProject({ params }: Params) {
     floorPlans: floorPlans.map((u, i) => toFile(u, i)),
     brochure: rawMeta.brochureUrl ? toFile(rawMeta.brochureUrl) : null,
     unitTypes: Array.isArray(rawMeta.unitTypes) ? rawMeta.unitTypes : undefined,
+    amenityTags: Array.isArray(rawMeta.amenityTags) ? rawMeta.amenityTags : [],
   };
 
   return (

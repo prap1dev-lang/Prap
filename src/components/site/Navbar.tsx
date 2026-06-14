@@ -81,7 +81,7 @@ export default function Navbar() {
                         <col.icon className="h-3.5 w-3.5" strokeWidth={1.6} /> {col.title}
                       </p>
                       <ul className="mt-1.5 space-y-0.5">
-                        {col.items.slice(0, 5).map((it) => (
+                        {col.items.map((it) => (
                           <li key={it.label}>
                             <Link href={it.href} onClick={() => setOpen(false)} className="block px-2 py-1.5 rounded-xl text-[0.82rem] text-ink-600 hover:bg-ink-900/5">
                               {it.label}

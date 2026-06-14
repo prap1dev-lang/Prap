@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { destroyCloudinaryUrl } from "@/lib/cloudinary";
 
 /**
  * Hard-delete a user and every record tied to them.
@@ -36,6 +37,11 @@ export async function deleteUserCompletely(userId: string): Promise<{ ok: true }
 
     // 3. Cascade-backed tables — deleting the user row would clear these,
     //    but we remove them explicitly so the order is deterministic.
+    //    Purge the actual Cloudinary files first (best-effort).
+    const { data: userDocs } = await sb.from("kyc_docs").select("storage_key").eq("user_id", userId);
+    for (const d of userDocs ?? []) {
+      if (d.storage_key) await destroyCloudinaryUrl(d.storage_key);
+    }
     await sb.from("kyc_docs").delete().eq("user_id", userId);
     await sb.from("kyc_verifications").delete().eq("user_id", userId);
     await sb.from("aadhaar_otp_sessions").delete().eq("user_id", userId);

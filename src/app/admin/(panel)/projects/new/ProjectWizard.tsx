@@ -3,8 +3,9 @@ import { useState, useRef } from "react";
 import {
   CheckCircle2, ChevronRight, ChevronLeft, Loader2, Upload, X,
   Building2, Scale, Home, DollarSign, Star, Wrench, MapPin,
-  TrendingUp, ShieldCheck, Eye, FileText,
+  TrendingUp, ShieldCheck, Eye, FileText, Check,
 } from "lucide-react";
+import { AMENITY_GROUPS } from "@/lib/amenities";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -247,6 +248,44 @@ function ButtonGroup({ value, onChange, options }: {
   );
 }
 
+/** Grouped amenity picker — icon chips toggled on/off, stored as id list. */
+function AmenityPicker({ selected, onToggle }: {
+  selected: string[]; onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      {AMENITY_GROUPS.map((group) => (
+        <div key={group.category}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-400 mb-2">{group.category}</p>
+          <div className="flex flex-wrap gap-2">
+            {group.items.map((a) => {
+              const Icon = a.icon;
+              const active = selected.includes(a.id);
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => onToggle(a.id)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition ${
+                    active
+                      ? "bg-brand-600 border-brand-600 text-white"
+                      : "bg-white border-ink-200 text-ink-600 hover:border-brand-400 hover:bg-brand-50/40"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {a.label}
+                  {active && <Check className="h-3.5 w-3.5" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Multi-select chip group. Stores selection as a comma-separated string. */
 function MultiSelectChips({ value, onChange, options }: {
   value: string; onChange: (v: string) => void; options: string[];
@@ -451,6 +490,7 @@ export interface ProjectInitial {
   floorPlans?: UploadedFile[];
   brochure?: UploadedFile | null;
   unitTypes?: UnitType[];
+  amenityTags?: string[];
 }
 
 export default function ProjectWizard({ initial }: { initial?: ProjectInitial } = {}) {
@@ -465,6 +505,7 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
   const [unitTypes, setUnitTypes] = useState<UnitType[]>(
     initial?.unitTypes && initial.unitTypes.length ? initial.unitTypes : [{ ...EMPTY_UNIT }],
   );
+  const [amenityTags, setAmenityTags] = useState<string[]>(initial?.amenityTags ?? []);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -478,6 +519,9 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
     setUnitTypes((rows) => (rows.length === 1 ? rows : rows.filter((_, idx) => idx !== i)));
   const setUnitField = (i: number, k: keyof UnitType) => (v: string) =>
     setUnitTypes((rows) => rows.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
+
+  const toggleAmenity = (id: string) =>
+    setAmenityTags((tags) => (tags.includes(id) ? tags.filter((t) => t !== id) : [...tags, id]));
 
   // Overall completion: share of fillable fields that have a value, including
   // the four media uploads. `isListed` is a default toggle and not counted.
@@ -509,6 +553,7 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
         brochureUrl: brochure[0]?.url ?? null,
         // Only send rows that have at least a configuration selected.
         unitTypes: unitTypes.filter((u) => u.config.trim() !== ""),
+        amenityTags,
       };
       const res = await fetch(
         isEdit ? `/api/admin/projects/${initial!.slug}` : "/api/admin/projects",
@@ -861,7 +906,16 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
 
         {/* ── STEP 5: Amenities ── */}
         {step === 5 && (
-          <StepShell title="Amenities & Lifestyle Features" subtitle="Club and lifestyle details.">
+          <StepShell title="Amenities & Lifestyle Features" subtitle="Select all amenities this project offers — these show as icon tags on the website.">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <label className="label !mb-0">Project amenities</label>
+                <span className="text-xs text-ink-400">{amenityTags.length} selected</span>
+              </div>
+              <AmenityPicker selected={amenityTags} onToggle={toggleAmenity} />
+            </div>
+
+            <SectionHeading icon={Star} label="Additional details (optional)" className="mb-4" />
             <div className="grid sm:grid-cols-2 gap-5">
               <Field label="Clubhouse Details">
                 <Input value={form.clubhouseDetails} onChange={set("clubhouseDetails")} placeholder="e.g. 30,000 sq.ft. multi-activity clubhouse" />

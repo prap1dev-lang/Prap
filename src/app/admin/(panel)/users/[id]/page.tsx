@@ -5,11 +5,14 @@ import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
 import { deleteUserCompletely } from "@/lib/admin-users";
-import { ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
+import { destroyCloudinaryUrl } from "@/lib/cloudinary";
+import { ExternalLink, ShieldCheck, AlertTriangle, UserRound } from "lucide-react";
 import ReraVerifyButton from "@/components/admin/ReraVerifyButton";
 import DeleteUserButton from "@/components/admin/DeleteUserButton";
 import KycDecisionButtons from "@/components/admin/KycDecisionButtons";
 import SendResetButton from "@/components/admin/SendResetButton";
+import EditUserForm from "@/components/admin/EditUserForm";
+import DeleteKycDocButton from "@/components/admin/DeleteKycDocButton";
 
 export const metadata = buildMetadata({ title: "User · Admin", path: "/admin/users", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -52,6 +55,107 @@ async function deleteUser(formData: FormData) {
   redirect("/admin/users");
 }
 
+async function updateUser(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  "use server";
+  const me = await requireAdmin();
+  const id = String(formData.get("id"));
+  if (!id) return { ok: false, error: "Missing user id" };
+
+  const email = String(formData.get("email") || "").trim();
+  const role = String(formData.get("role") || "").trim();
+  const confirmAdmin = String(formData.get("confirmAdmin") || "") === "yes";
+  const allowedRoles = ["broker", "corporate", "referrer", "admin"];
+  if (role && !allowedRoles.includes(role)) return { ok: false, error: "Invalid role" };
+
+  const sb = supabaseAdmin();
+  const { data: target } = await sb.from("users").select("role").eq("id", id).maybeSingle();
+  if (!target) return { ok: false, error: "User not found" };
+
+  // ── Role-change safeguards ──
+  if (role && role !== target.role) {
+    // Don't let an admin demote their own account (lock-out protection).
+    if (id === me.authId && target.role === "admin") {
+      return { ok: false, error: "You cannot change your own admin role." };
+    }
+    // Granting OR removing the admin role requires explicit confirmation.
+    if ((role === "admin" || target.role === "admin") && !confirmAdmin) {
+      return {
+        ok: false,
+        error:
+          role === "admin"
+            ? "Granting admin access requires confirmation. Tick the confirm box and save again."
+            : "Removing admin access requires confirmation. Tick the confirm box and save again.",
+      };
+    }
+  }
+
+  const patch: Record<string, any> = {
+    name: String(formData.get("name") || "").trim() || null,
+    email: email || null,
+    rera_number: String(formData.get("rera_number") || "").trim().toUpperCase() || null,
+    upi_id: String(formData.get("upi_id") || "").trim() || null,
+    bank_account: String(formData.get("bank_account") || "").trim() || null,
+    bank_ifsc: String(formData.get("bank_ifsc") || "").trim().toUpperCase() || null,
+  };
+  if (role) patch.role = role;
+
+  const { error } = await sb.from("users").update(patch).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+
+  // Keep the auth email in sync when it changed (best-effort).
+  if (email) {
+    await sb.auth.admin.updateUserById(id, { email }).catch(() => {});
+  }
+
+  await sb.from("audit_log").insert({ action: "user_updated", payload: { user_id: id, fields: Object.keys(patch) } });
+
+  revalidatePath(`/admin/users/${id}`);
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
+async function deleteKycDoc(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  "use server";
+  await requireAdmin();
+  const docId = String(formData.get("docId") || "");
+  if (!docId) return { ok: false, error: "Missing document id" };
+
+  const sb = supabaseAdmin();
+  const { data: doc } = await sb
+    .from("kyc_docs")
+    .select("id, user_id, kind, storage_key")
+    .eq("id", docId)
+    .maybeSingle();
+  if (!doc) return { ok: false, error: "Document not found" };
+
+  // Purge the actual file from Cloudinary first (best-effort). If it's already
+  // gone or not a Cloudinary URL we still remove the DB record.
+  let fileResult: { ok: boolean; error?: string } = { ok: true };
+  if (doc.storage_key) fileResult = await destroyCloudinaryUrl(doc.storage_key);
+
+  const { error } = await sb.from("kyc_docs").delete().eq("id", docId);
+  if (error) return { ok: false, error: error.message };
+
+  // If this was the profile photo, clear the avatar pointer too.
+  if (doc.kind === "photo") {
+    await sb.from("users").update({ photo_url: null }).eq("id", doc.user_id);
+  }
+
+  await sb.from("audit_log").insert({
+    action: "kyc_doc_deleted",
+    payload: {
+      user_id: doc.user_id,
+      doc_id: docId,
+      kind: doc.kind,
+      file_purged: fileResult.ok,
+      file_error: fileResult.ok ? undefined : fileResult.error,
+    },
+  });
+
+  revalidatePath(`/admin/users/${doc.user_id}`);
+  return { ok: true };
+}
+
 async function sendPasswordReset(formData: FormData) {
   "use server";
   await requireAdmin();
@@ -87,16 +191,36 @@ export default async function UserDetail({ params }: { params: { id: string } })
         <Link href="/admin/users" className="hover:text-brand-700">← Back to users</Link>
       </nav>
 
-      <header className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <p className="text-sm text-ink-500 capitalize">{u.role}</p>
-          <h1 className="text-3xl font-extrabold tracking-tight">{u.name}</h1>
-          <p className="text-ink-500 mt-1">{u.email} · {u.phone}</p>
+      <header className="flex items-start justify-between flex-wrap gap-4">
+        <div className="flex items-start gap-4">
+          <div className="h-20 w-20 rounded-full overflow-hidden border border-ink-200 bg-ink-50 grid place-items-center flex-none">
+            {u.photo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={u.photo_url} alt={u.name || "Profile photo"} className="h-full w-full object-cover" />
+            ) : (
+              <UserRound className="h-9 w-9 text-ink-400" />
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-ink-500 capitalize">{u.role}</p>
+            <h1 className="text-3xl font-extrabold tracking-tight">{u.name}</h1>
+            <p className="text-ink-500 mt-1">{u.email || "—"} · {u.phone}</p>
+          </div>
         </div>
         <span className={`badge ${u.kyc_status === "verified" ? "!bg-emerald-50 !text-emerald-700" : u.kyc_status === "rejected" ? "!bg-rose-50 !text-rose-700" : "!bg-amber-50 !text-amber-700"}`}>
           KYC: {u.kyc_status}
         </span>
       </header>
+
+      {/* Edit profile (collapses to a button until clicked) */}
+      <EditUserForm
+        user={{
+          id: u.id, name: u.name, email: u.email, role: u.role,
+          rera_number: u.rera_number, upi_id: u.upi_id,
+          bank_account: u.bank_account, bank_ifsc: u.bank_ifsc,
+        }}
+        action={updateUser}
+      />
 
       <section className="card p-6">
         <h2 className="font-bold flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-brand-600" /> Surepass verification status</h2>
@@ -149,6 +273,20 @@ export default async function UserDetail({ params }: { params: { id: string } })
       </section>
 
       <section className="card p-6">
+        <h2 className="font-bold">Personal &amp; payout details</h2>
+        <dl className="mt-4 grid sm:grid-cols-2 gap-x-8 text-sm">
+          <Row k="Full name" v={u.name || "—"} />
+          <Row k="Email" v={u.email || "—"} />
+          <Row k="Phone" v={u.phone || "—"} />
+          <Row k="Role" v={u.role} />
+          <Row k="UPI ID" v={u.upi_id || "—"} />
+          <Row k="Bank account" v={u.bank_account || "—"} mono />
+          <Row k="IFSC code" v={u.bank_ifsc || "—"} mono />
+          {u.role === "broker" && <Row k="RERA number" v={u.rera_number || "—"} mono />}
+        </dl>
+      </section>
+
+      <section className="card p-6">
         <h2 className="font-bold flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-brand-600" /> Login &amp; security</h2>
         <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl border border-ink-100 p-3">
@@ -183,7 +321,8 @@ export default async function UserDetail({ params }: { params: { id: string } })
         ) : (
           <ul className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             {docs.map((d) => (
-              <li key={d.id}>
+              <li key={d.id} className="relative">
+                <DeleteKycDocButton docId={d.id} action={deleteKycDoc} />
                 <a
                   href={d.storage_key}
                   target="_blank"

@@ -37,6 +37,7 @@ function rowToProject(r: any): Project {
     description: r.description || "",
     status: statusMap[r.status as string] || "Under Construction",
     unitTypes: Array.isArray(r.meta?.unitTypes) ? r.meta.unitTypes : [],
+    amenityTags: Array.isArray(r.meta?.amenityTags) ? r.meta.amenityTags : [],
     meta: r.meta || {},
   };
 }
@@ -67,11 +68,18 @@ const getAllListedProjects = unstable_cache(
 );
 
 export async function listProjects(
-  opts: { city?: string; q?: string; status?: string; limit?: number } = {},
+  opts: { city?: string; q?: string; status?: string; amenities?: string[]; limit?: number } = {},
 ): Promise<Project[]> {
   let list = await getAllListedProjects();
   if (opts.city) list = list.filter((p) => p.city === opts.city);
   if (opts.status) list = list.filter((p) => p.status === opts.status);
+  if (opts.amenities && opts.amenities.length) {
+    // Project must have ALL selected amenities.
+    list = list.filter((p) => {
+      const tags = new Set(p.amenityTags ?? []);
+      return opts.amenities!.every((a) => tags.has(a));
+    });
+  }
   if (opts.q) {
     const s = opts.q.toLowerCase();
     list = list.filter((p) => [p.name, p.builder, p.sector, p.city].join(" ").toLowerCase().includes(s));

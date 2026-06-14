@@ -5,6 +5,7 @@ import { formatINR } from "@/lib/projects";
 import { getProjectBySlug, listProjectSlugs } from "@/lib/projects-db";
 import { DETAIL_SECTIONS } from "@/lib/project-fields";
 import Gallery from "./Gallery";
+import { amenitiesFromIds } from "@/lib/amenities";
 import { buildMetadata, SITE } from "@/lib/seo";
 import {
   BadgeCheck, MapPin, Coins, CheckCircle2, Calendar, Building2,
@@ -42,6 +43,7 @@ export default async function ProjectPage({ params }: Params) {
   if (!p) return notFound();
 
   const m = p.meta ?? {};
+  const amenityList = amenitiesFromIds(p.amenityTags ?? []);
 
   const productLd = {
     "@context": "https://schema.org",
@@ -104,7 +106,7 @@ export default async function ProjectPage({ params }: Params) {
                 <span className="badge !bg-white/90 !text-ink-900"><BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> RERA: {p.rera}</span>
                 <span className="badge !bg-brand-600 !text-white">{p.status}</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-white">{p.name}</h1>
+              <h1 className="font-serif text-3xl sm:text-5xl font-light tracking-[-0.02em] text-white">{p.name}</h1>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm sm:text-base text-white/90">
                 <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {p.sector ? `${p.sector}, ` : ""}{p.city}</span>
                 <span className="opacity-60">·</span>
@@ -141,7 +143,7 @@ export default async function ProjectPage({ params }: Params) {
               )}
 
               {/* In-page section nav (jump links) */}
-              <div className="card p-2 sticky top-16 z-10 overflow-x-auto">
+              <div className="card p-2 sticky top-24 z-20 overflow-x-auto">
                 <div className="flex gap-1 min-w-max text-sm">
                   {p.unitTypes && p.unitTypes.length > 0 && <a href="#units" className="px-3 py-1.5 rounded-lg hover:bg-ink-50 text-ink-600 whitespace-nowrap">Pricing</a>}
                   {p.description && <a href="#about" className="px-3 py-1.5 rounded-lg hover:bg-ink-50 text-ink-600 whitespace-nowrap">About</a>}
@@ -152,35 +154,46 @@ export default async function ProjectPage({ params }: Params) {
                 </div>
               </div>
 
-              {/* Unit types & pricing */}
+              {/* Unit types & pricing — one card per BHK type */}
               {p.unitTypes && p.unitTypes.length > 0 && (
                 <section id="units" className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2"><IndianRupee className="h-5 w-5 text-brand-600" /> Unit types &amp; pricing</h2>
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="w-full text-sm min-w-[480px]">
-                      <thead>
-                        <tr className="text-left text-ink-500 border-b border-ink-100">
-                          <th className="py-2 pr-4 font-semibold">Configuration</th>
-                          <th className="py-2 pr-4 font-semibold">Super Area</th>
-                          <th className="py-2 pr-4 font-semibold">Carpet Area</th>
-                          <th className="py-2 pr-4 font-semibold">Bath</th>
-                          <th className="py-2 pr-4 font-semibold whitespace-nowrap">Starting Price</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {p.unitTypes.map((u, i) => (
-                          <tr key={i} className="border-b border-ink-50 last:border-0">
-                            <td className="py-2.5 pr-4 font-semibold text-ink-900 whitespace-nowrap">{u.config}</td>
-                            <td className="py-2.5 pr-4 text-ink-700">{u.superArea ? `${u.superArea} sq.ft.` : "—"}</td>
-                            <td className="py-2.5 pr-4 text-ink-700">{u.carpetArea ? `${u.carpetArea} sq.ft.` : "—"}</td>
-                            <td className="py-2.5 pr-4 text-ink-700">{u.bathrooms || "—"}</td>
-                            <td className="py-2.5 pr-4 font-semibold text-brand-700 whitespace-nowrap">
-                              {u.price ? formatINR(Number(u.price)) : "On request"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <h2 className="font-serif text-xl sm:text-2xl font-light flex items-center gap-2"><IndianRupee className="h-5 w-5 text-brand-600" /> Unit types, sizes &amp; pricing</h2>
+                  <div className="mt-5 grid sm:grid-cols-2 gap-4">
+                    {p.unitTypes.map((u, i) => (
+                      <div key={i} className="rounded-2xl border border-ink-200 p-4 hover:border-brand-300 hover:shadow-card transition">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold text-brand-700">
+                            <Home className="h-4 w-4" /> {u.config}
+                          </span>
+                          <div className="text-right">
+                            <p className="text-[11px] uppercase tracking-wider text-ink-400">Starting at</p>
+                            <p className="font-extrabold text-brand-700">{u.price ? formatINR(Number(u.price)) : "On request"}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-lg bg-ink-50 px-3 py-2">
+                            <p className="text-[11px] uppercase tracking-wider text-ink-400 flex items-center gap-1"><Ruler className="h-3 w-3" /> Super area</p>
+                            <p className="font-semibold text-ink-900">{u.superArea ? `${u.superArea} sq.ft.` : "—"}</p>
+                          </div>
+                          <div className="rounded-lg bg-ink-50 px-3 py-2">
+                            <p className="text-[11px] uppercase tracking-wider text-ink-400 flex items-center gap-1"><Ruler className="h-3 w-3" /> Carpet area</p>
+                            <p className="font-semibold text-ink-900">{u.carpetArea ? `${u.carpetArea} sq.ft.` : "—"}</p>
+                          </div>
+                          {u.bathrooms && (
+                            <div className="rounded-lg bg-ink-50 px-3 py-2">
+                              <p className="text-[11px] uppercase tracking-wider text-ink-400">Bathrooms</p>
+                              <p className="font-semibold text-ink-900">{u.bathrooms}</p>
+                            </div>
+                          )}
+                          {u.balconyArea && (
+                            <div className="rounded-lg bg-ink-50 px-3 py-2">
+                              <p className="text-[11px] uppercase tracking-wider text-ink-400">Balcony</p>
+                              <p className="font-semibold text-ink-900">{u.balconyArea} sq.ft.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </section>
               )}
@@ -188,7 +201,7 @@ export default async function ProjectPage({ params }: Params) {
               {/* About */}
               {p.description && (
                 <section id="about" className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="text-lg sm:text-xl font-bold">About {p.name}</h2>
+                  <h2 className="font-serif text-xl sm:text-2xl font-light">About {p.name}</h2>
                   <p className="mt-3 text-ink-700 leading-relaxed whitespace-pre-line">{p.description}</p>
                 </section>
               )}
@@ -196,7 +209,7 @@ export default async function ProjectPage({ params }: Params) {
               {/* Highlights */}
               {p.highlights && p.highlights.length > 0 && (
                 <section className="card p-5 sm:p-6">
-                  <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-brand-600" /> Highlights</h2>
+                  <h2 className="font-serif text-xl sm:text-2xl font-light flex items-center gap-2"><Sparkles className="h-5 w-5 text-brand-600" /> Highlights</h2>
                   <ul className="mt-4 grid sm:grid-cols-2 gap-2 text-ink-700">
                     {p.highlights.map((h) => (
                       <li key={h} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none" /> {h}</li>
@@ -205,22 +218,38 @@ export default async function ProjectPage({ params }: Params) {
                 </section>
               )}
 
-              {/* Amenities */}
-              {p.amenities && p.amenities.length > 0 && (
+              {/* Amenities — icon tags */}
+              {(amenityList.length > 0 || (p.amenities && p.amenities.length > 0)) && (
                 <section id="amenities" className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="text-lg sm:text-xl font-bold">Amenities</h2>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {p.amenities.map((a) => (
-                      <span key={a} className="rounded-full bg-ink-100 px-3 py-1 text-sm text-ink-700">{a}</span>
-                    ))}
-                  </div>
+                  <h2 className="font-serif text-xl sm:text-2xl font-light">Amenities</h2>
+                  {amenityList.length > 0 ? (
+                    <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {amenityList.map((a) => {
+                        const Icon = a.icon;
+                        return (
+                          <div key={a.id} className="flex items-center gap-2.5 rounded-xl border border-ink-100 bg-ink-50/50 px-3 py-2.5">
+                            <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-brand-50 text-brand-700">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <span className="text-sm text-ink-800 leading-tight">{a.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {p.amenities.map((a) => (
+                        <span key={a} className="rounded-full bg-ink-100 px-3 py-1 text-sm text-ink-700">{a}</span>
+                      ))}
+                    </div>
+                  )}
                 </section>
               )}
 
               {/* All extended detail sections */}
               {filledSections.map((section) => (
                 <section key={section.title} id={slugifyAnchor(section.title)} className="card p-5 sm:p-6 scroll-mt-32">
-                  <h2 className="text-lg sm:text-xl font-bold">{section.title}</h2>
+                  <h2 className="font-serif text-xl sm:text-2xl font-light">{section.title}</h2>
                   <dl className="mt-4 grid sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
                     {section.rows.map((r) => (
                       <div key={r.label} className="flex justify-between gap-4 border-b border-ink-50 py-2.5">
@@ -235,7 +264,7 @@ export default async function ProjectPage({ params }: Params) {
               {m.brochureUrl && (
                 <section className="card p-5 sm:p-6 flex items-center justify-between flex-wrap gap-3 bg-gradient-to-r from-brand-50 to-transparent">
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold">Project brochure</h2>
+                    <h2 className="font-serif text-xl sm:text-2xl font-light">Project brochure</h2>
                     <p className="mt-1 text-sm text-ink-500">Download the official PDF for full details.</p>
                   </div>
                   <a href={m.brochureUrl} target="_blank" rel="noopener noreferrer" className="btn-primary">

@@ -4,6 +4,7 @@ import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
 import { DETAIL_SECTIONS } from "@/lib/project-fields";
+import { amenitiesFromIds } from "@/lib/amenities";
 import { ArrowLeft, ExternalLink, FileText } from "lucide-react";
 import DeleteProjectButton from "./DeleteProjectButton";
 
@@ -34,6 +35,7 @@ export default async function AdminProjectDetail({ params }: Params) {
   const unitTypes: any[] = Array.isArray(m.unitTypes) ? m.unitTypes : [];
   const gallery: string[] = Array.isArray(p.gallery) ? p.gallery : [];
   const floorPlans: string[] = Array.isArray(m.floorPlans) ? m.floorPlans : [];
+  const amenityList = amenitiesFromIds(Array.isArray(m.amenityTags) ? m.amenityTags : []);
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -120,7 +122,7 @@ export default async function AdminProjectDetail({ params }: Params) {
       )}
 
       {/* Amenities & highlights */}
-      {((p.amenities || []).length > 0 || (p.highlights || []).length > 0) && (
+      {(amenityList.length > 0 || (p.amenities || []).length > 0 || (p.highlights || []).length > 0) && (
         <section className="card p-6 space-y-4">
           {(p.highlights || []).length > 0 && (
             <div>
@@ -132,9 +134,24 @@ export default async function AdminProjectDetail({ params }: Params) {
               </div>
             </div>
           )}
+          {amenityList.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold">Amenities <span className="text-sm font-normal text-ink-400">({amenityList.length})</span></h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {amenityList.map((a) => {
+                  const Icon = a.icon;
+                  return (
+                    <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-700">
+                      <Icon className="h-3.5 w-3.5" /> {a.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {(p.amenities || []).length > 0 && (
             <div>
-              <h2 className="text-lg font-bold">Amenities</h2>
+              <h2 className="text-lg font-bold">Amenity notes</h2>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(p.amenities as string[]).map((a) => (
                   <span key={a} className="rounded-full bg-ink-100 px-3 py-1 text-sm text-ink-700">{a}</span>
