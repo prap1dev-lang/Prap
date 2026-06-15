@@ -162,7 +162,7 @@ export default async function ProjectPage({ params }: Params) {
 
               <Accordion sections={[
                 {
-                  id: "about", title: `About ${p.name}`, icon: Info, filled: descPoints.length > 0, content: (
+                  id: "about", title: `About ${p.name}`, icon: <Info className="h-5 w-5" />, filled: descPoints.length > 0, content: (
                     <ul className="space-y-2 text-ink-700">
                       {descPoints.map((pt, i) => (
                         <li key={i} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none mt-0.5" /> <span>{pt}</span></li>
@@ -171,7 +171,7 @@ export default async function ProjectPage({ params }: Params) {
                   ),
                 },
                 {
-                  id: "highlights", title: "Highlights", icon: Sparkles, filled: !!(p.highlights && p.highlights.length > 0), content: (
+                  id: "highlights", title: "Highlights", icon: <Sparkles className="h-5 w-5" />, filled: !!(p.highlights && p.highlights.length > 0), content: (
                     <ul className="grid sm:grid-cols-2 gap-2 text-ink-700">
                       {(p.highlights ?? []).map((h) => (
                         <li key={h} className="flex gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600 flex-none mt-0.5" /> <span>{h}</span></li>
@@ -180,7 +180,7 @@ export default async function ProjectPage({ params }: Params) {
                   ),
                 },
                 {
-                  id: "pricing", title: "Pricing & Units", icon: IndianRupee, filled: !!(p.unitTypes && p.unitTypes.length > 0), content: (
+                  id: "pricing", title: "Pricing & Units", icon: <IndianRupee className="h-5 w-5" />, filled: !!(p.unitTypes && p.unitTypes.length > 0), content: (
                     <div>
                       <div className="grid sm:grid-cols-2 gap-4">
                         {[...(p.unitTypes ?? [])].sort((a, b) => (Number(a.price) || Infinity) - (Number(b.price) || Infinity)).map((u, i) => (
@@ -227,7 +227,7 @@ export default async function ProjectPage({ params }: Params) {
                   ),
                 },
                 {
-                  id: "amenities", title: "Amenities", icon: Star, filled: amenityList.length > 0 || !!(p.amenities && p.amenities.length > 0), content: (
+                  id: "amenities", title: "Amenities", icon: <Star className="h-5 w-5" />, filled: amenityList.length > 0 || !!(p.amenities && p.amenities.length > 0), content: (
                     amenityList.length > 0 ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {amenityList.map((a) => {
@@ -252,7 +252,7 @@ export default async function ProjectPage({ params }: Params) {
                   ),
                 },
                 {
-                  id: "details", title: "Specifications & Details", icon: FileText, filled: filledSections.length > 0, content: (
+                  id: "details", title: "Specifications & Details", icon: <FileText className="h-5 w-5" />, filled: filledSections.length > 0, content: (
                     <div className="space-y-6">
                       {filledSections.map((section) => (
                         <div key={section.title}>
@@ -271,7 +271,7 @@ export default async function ProjectPage({ params }: Params) {
                   ),
                 },
                 {
-                  id: "reviews", title: `Customer Reviews${reviews.length ? ` (${reviews.length})` : ""}`, icon: Star, filled: reviews.length > 0, content: (
+                  id: "reviews", title: `Customer Reviews${reviews.length ? ` (${reviews.length})` : ""}`, icon: <Star className="h-5 w-5" />, filled: reviews.length > 0, content: (
                     <div>
                       {reviews.length > 0 && (
                         <div className="inline-flex items-center gap-2 mb-4">

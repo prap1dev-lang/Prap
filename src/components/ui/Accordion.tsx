@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 export interface AccordionSection {
   id: string;
   title: string;
-  icon: LucideIcon;
+  // Pre-rendered icon element (e.g. <Info className="h-5 w-5" />). A rendered
+  // node can cross the server→client boundary; a component function cannot.
+  icon: React.ReactNode;
   filled: boolean;       // show a green tick only when this section has data
   content: React.ReactNode;
 }
@@ -27,7 +28,6 @@ export default function Accordion({
   return (
     <div className="space-y-3">
       {sections.map((s) => {
-        const Icon = s.icon;
         const isOpen = !!open[s.id];
         return (
           <section key={s.id} className="card overflow-hidden">
@@ -38,7 +38,7 @@ export default function Accordion({
               className="w-full flex items-center gap-3 p-4 sm:p-5 text-left hover:bg-ink-50/60 transition"
             >
               <span className={`grid h-9 w-9 flex-none place-items-center rounded-xl ${s.filled ? "bg-brand-50 text-brand-700" : "bg-ink-100 text-ink-400"}`}>
-                <Icon className="h-5 w-5" />
+                {s.icon}
               </span>
               <span className="font-serif text-lg sm:text-xl font-light text-ink-900">{s.title}</span>
               {s.filled && <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-none" aria-label="Completed" />}

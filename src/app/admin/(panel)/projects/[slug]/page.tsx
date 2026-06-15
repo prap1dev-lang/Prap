@@ -121,7 +121,7 @@ export default async function AdminProjectDetail({ params }: Params) {
 
       <Accordion renderUnfilled sections={[
         {
-          id: "core", title: "Core details", icon: Info, filled: true, content: (
+          id: "core", title: "Core details", icon: <Info className="h-5 w-5" />, filled: true, content: (
             <dl className="grid sm:grid-cols-2 gap-x-8">
               <Row label="Slug" value={p.slug} />
               <Row label="Project name" value={p.name} />
@@ -139,7 +139,7 @@ export default async function AdminProjectDetail({ params }: Params) {
           ),
         },
         {
-          id: "units", title: `Unit types${unitTypes.length ? ` (${unitTypes.length})` : ""}`, icon: Home, filled: unitTypes.length > 0, content: (
+          id: "units", title: `Unit types${unitTypes.length ? ` (${unitTypes.length})` : ""}`, icon: <Home className="h-5 w-5" />, filled: unitTypes.length > 0, content: (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[560px]">
                 <thead className="text-left text-ink-500 border-b border-ink-100">
@@ -166,7 +166,7 @@ export default async function AdminProjectDetail({ params }: Params) {
           ),
         },
         {
-          id: "highlights", title: "Highlights", icon: Sparkles, filled: (p.highlights || []).length > 0, content: (
+          id: "highlights", title: "Highlights", icon: <Sparkles className="h-5 w-5" />, filled: (p.highlights || []).length > 0, content: (
             <div className="flex flex-wrap gap-2">
               {(p.highlights as string[] || []).map((h) => (
                 <span key={h} className="rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-700">{h}</span>
@@ -175,7 +175,7 @@ export default async function AdminProjectDetail({ params }: Params) {
           ),
         },
         {
-          id: "amenities", title: `Amenities${amenityList.length ? ` (${amenityList.length})` : ""}`, icon: Star, filled: amenityList.length > 0 || (p.amenities || []).length > 0, content: (
+          id: "amenities", title: `Amenities${amenityList.length ? ` (${amenityList.length})` : ""}`, icon: <Star className="h-5 w-5" />, filled: amenityList.length > 0 || (p.amenities || []).length > 0, content: (
             <div className="space-y-4">
               {amenityList.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -203,7 +203,7 @@ export default async function AdminProjectDetail({ params }: Params) {
           ),
         },
         ...metaSections.map((section) => ({
-          id: section.title, title: section.title, icon: FileText, filled: section.filled, content: (
+          id: section.title, title: section.title, icon: <FileText className="h-5 w-5" />, filled: section.filled, content: (
             <dl className="grid sm:grid-cols-2 gap-x-8">
               {section.rows.map((r) => (
                 <Row key={r.label} label={r.label} value={r.value} />
@@ -212,12 +212,12 @@ export default async function AdminProjectDetail({ params }: Params) {
           ),
         })),
         {
-          id: "description", title: "Description", icon: Info, filled: !!p.description, content: (
+          id: "description", title: "Description", icon: <Info className="h-5 w-5" />, filled: !!p.description, content: (
             <p className="text-sm text-ink-700 whitespace-pre-line leading-relaxed">{p.description}</p>
           ),
         },
         {
-          id: "media", title: "Media", icon: ImageIcon, filled: gallery.length > 0 || floorPlans.length > 0 || !!m.brochureUrl, content: (
+          id: "media", title: "Media", icon: <ImageIcon className="h-5 w-5" />, filled: gallery.length > 0 || floorPlans.length > 0 || !!m.brochureUrl, content: (
             <div className="space-y-5">
               {gallery.length > 0 && (
                 <div>

@@ -45,7 +45,8 @@
       "Bash(sed -i 's/text-3xl font-extrabold text-ink-900/text-2xl sm:text-3xl font-extrabold text-ink-900/' src/components/site/RewardCalculator.tsx)",
       "Bash(sed -i 's/mt-2 text-3xl font-extrabold/mt-2 text-2xl sm:text-3xl font-extrabold/g; s/mt-3 text-3xl font-extrabold/mt-3 text-2xl sm:text-3xl font-extrabold/g' src/app/dashboard/page.tsx src/app/dashboard/wallet/page.tsx \"src/app/admin/\\(panel\\)/users/[id]/page.tsx\")",
       "Bash(cd d:/websitem/Prap && rm -f \"src/app/\\(marketing\\)/projects/[slug]/PropertyTabs.tsx\" && echo \"removed PropertyTabs.tsx\")",
-      "Bash(cd d:/websitem/Prap && rm -f \"src/app/\\(marketing\\)/projects/[slug]/Accordion.tsx\" && echo \"removed local Accordion\")"
+      "Bash(cd d:/websitem/Prap && rm -f \"src/app/\\(marketing\\)/projects/[slug]/Accordion.tsx\" && echo \"removed local Accordion\")",
+      "Bash(echo \"=== EXIT $? ===\")"
     ],
     "additionalDirectories": [
       "\\tmp",
