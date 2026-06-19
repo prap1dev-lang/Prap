@@ -22,12 +22,12 @@ export default function Hero() {
         <Reveal className="max-w-3xl">
           <span className="eyebrow">Property · Referral · Award · Program </span>
 
-          <h1 className="h1 mt-7">
+          <h1 className="h1 mt-7 text-5xl sm:text-6xl md:text-7xl lg:text-8xl">
             Own a home that's been{" "}
             <span className="italic text-gradient">verified before</span> you invest.
           </h1>
 
-          <p className="mt-7 max-w-xl text-lg md:text-xl text-ink-600 leading-relaxed font-light">
+          <p className="mt-7 max-w-xl text-xl md:text-2xl text-ink-600 leading-relaxed font-light">
             PRAP pairs RERA-verified projects with legal due-diligence and real cash
             rewards — so buying property feels calm, transparent and entirely yours.
           </p>
