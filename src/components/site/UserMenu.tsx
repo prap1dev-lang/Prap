@@ -58,10 +58,10 @@ export default function UserMenu({ variant = "desktop" }: { variant?: "desktop" 
     }
     return (
       <div className="flex items-center gap-6">
-        <Link href="/auth/login" className="btn-link text-ink-700 !text-[0.7rem] uppercase tracking-[0.18em]">
+        <Link href="/auth/login" className="btn-link text-ink-700 !text-[0.82rem] uppercase tracking-[0.18em]">
           Sign in
         </Link>
-        <Link href="/auth/signup" className="btn-primary !py-2.5 !px-5 !text-xs uppercase tracking-[0.14em]">
+        <Link href="/auth/signup" className="btn-primary !py-2.5 !px-5 !text-sm uppercase tracking-[0.14em]">
           Register
         </Link>
       </div>

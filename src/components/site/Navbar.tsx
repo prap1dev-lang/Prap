@@ -37,7 +37,7 @@ export default function Navbar() {
           PRAP<span className="text-brand-600">.</span>
         </Link>
 
-        <ul className="hidden lg:flex items-center gap-9 text-[0.7rem] font-medium uppercase tracking-[0.18em] text-ink-600">
+        <ul className="hidden lg:flex items-center gap-9 text-[0.82rem] font-medium uppercase tracking-[0.18em] text-ink-600">
           <li><ServicesMenu /></li>
           {links.map((l) => (
             <li key={l.href}>
