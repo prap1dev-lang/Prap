@@ -92,6 +92,7 @@ export default function HeroParallax() {
   return (
     <section
       ref={root}
+      data-noreveal
       className="relative isolate h-[100svh] min-h-[640px] overflow-hidden"
       aria-label="PRAP — find what moves you"
     >

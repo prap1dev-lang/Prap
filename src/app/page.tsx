@@ -1,6 +1,7 @@
 import Navbar from "@/components/site/Navbar";
 import HeroParallax from "@/components/site/HeroParallax";
 import SmoothScroll from "@/components/site/SmoothScroll";
+import AutoReveal from "@/components/site/AutoReveal";
 import TrustBar from "@/components/site/TrustBar";
 import ProjectsShowcase from "@/components/site/ProjectsShowcase";
 import ProjectRail from "@/components/site/ProjectRail";
@@ -32,6 +33,7 @@ export default async function HomePage() {
   return (
     <>
       <SmoothScroll />
+      <AutoReveal />
       <Navbar />
       <main>
         <HeroParallax />
