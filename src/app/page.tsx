@@ -1,5 +1,6 @@
 import Navbar from "@/components/site/Navbar";
-import Hero from "@/components/site/Hero";
+import HeroParallax from "@/components/site/HeroParallax";
+import SmoothScroll from "@/components/site/SmoothScroll";
 import TrustBar from "@/components/site/TrustBar";
 import ProjectsShowcase from "@/components/site/ProjectsShowcase";
 import ProjectRail from "@/components/site/ProjectRail";
@@ -30,9 +31,10 @@ export default async function HomePage() {
 
   return (
     <>
+      <SmoothScroll />
       <Navbar />
       <main>
-        <Hero />
+        <HeroParallax />
         <TrustBar />
         <ProjectRail eyebrow="Trending now" title="Projects in High Demand" projects={highDemand} />
         <ProjectRail eyebrow="Just launched" title="Newly Launched" projects={newlyLaunched} />

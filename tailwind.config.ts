@@ -60,7 +60,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "Segoe UI", "Inter", "Arial"],
         serif: ["var(--font-serif)", "ui-serif", "Georgia", "Cambria", "serif"],
-        display: ["var(--font-serif)", "ui-serif", "Georgia", "serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "ui-sans-serif", "system-ui", "Arial"],
       },
       borderRadius: {
         "2xl": "1.25rem", // 20px

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Fraunces, Inter, Archivo } from "next/font/google";
 import "./globals.css";
 import { buildMetadata, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import AlertHost from "@/components/ui/Alert";
@@ -18,6 +18,13 @@ const inter = Inter({
   variable: "--font-sans",
   display: "swap",
 });
+// Heavy geometric grotesque for the parallax hero wordmark / display headings.
+const archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 export const metadata: Metadata = buildMetadata();
 
@@ -30,7 +37,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="en-IN" className={`${fraunces.variable} ${inter.variable} ${archivo.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
