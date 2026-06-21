@@ -11,7 +11,8 @@ export const DETAIL_SECTIONS: FieldSection[] = [
   {
     title: "Project Overview",
     fields: [
-      { key: "projectType", label: "Project type" },
+      { key: "projectType", label: "Property type" },
+      { key: "subType", label: "Sub-type" },
       { key: "totalLandArea", label: "Total land area" },
       { key: "towers", label: "Towers" },
       { key: "floors", label: "Floors per tower" },
@@ -40,19 +41,6 @@ export const DETAIL_SECTIONS: FieldSection[] = [
       { key: "unitsPerFloor", label: "Apartments per floor" },
       { key: "liftsPerTower", label: "Lifts per tower" },
       { key: "vaastuFacing", label: "Vaastu / facing" },
-    ],
-  },
-  {
-    title: "Pricing & Payment",
-    fields: [
-      { key: "bsp", label: "BSP (₹/sq.ft.)" },
-      { key: "plcCharges", label: "PLC charges" },
-      { key: "parkingCharges", label: "Parking charges" },
-      { key: "clubMembership", label: "Club membership" },
-      { key: "maintenanceCharges", label: "Maintenance charges" },
-      { key: "bookingAmount", label: "Booking amount" },
-      { key: "paymentPlan", label: "Payment plan" },
-      { key: "additionalCosts", label: "Additional costs" },
     ],
   },
   {

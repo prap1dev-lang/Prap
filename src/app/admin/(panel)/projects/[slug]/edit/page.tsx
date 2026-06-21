@@ -41,7 +41,6 @@ export default async function EditProject({ params }: Params) {
       sector: p.sector || "",
       reraNumber: p.rera_number || "",
       startingPrice: String(p.starting_price_inr ?? ""),
-      maxPrice: String(p.max_price_inr ?? ""),
       possessionDate: p.possession || "",
       configurations: (p.configurations || []).join(", "),
       highlights: (p.highlights || []).join(", "),

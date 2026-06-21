@@ -18,7 +18,7 @@ export default function Page({ searchParams }: { searchParams?: { role?: string;
         Join the platform — 25,000 PRAP Coins (₹25,000) credited on signup.
       </p>
       <SignupForm
-        initialRole={(searchParams?.role as any) || "referrer"}
+        initialRole={(searchParams?.role as any) || "individual"}
         initialReferral={searchParams?.ref || ""}
       />
       <p className="mt-6 text-sm text-ink-500">

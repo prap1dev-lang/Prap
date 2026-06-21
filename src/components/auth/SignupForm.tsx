@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Briefcase, Building2, UserRound, ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
+import { Briefcase, Building2, UserRound, Sparkles, HardHat, ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase-client";
 import { supabaseBrowser } from "@/lib/supabase";
 import { showAlert } from "@/components/ui/Alert";
@@ -10,7 +10,12 @@ import {
   ConfirmationResult,
 } from "firebase/auth";
 
-type Role = "broker" | "corporate" | "referrer";
+type Role = "broker" | "corporate" | "creator" | "builder" | "individual";
+
+const ROLE_IDS: Role[] = ["broker", "corporate", "creator", "builder", "individual"];
+
+/** Roles that supply a company / organisation name. */
+const COMPANY_ROLES: Role[] = ["builder", "corporate"];
 
 const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
@@ -36,7 +41,9 @@ function friendlyFirebaseError(e: any): string {
 const roles: { id: Role; title: string; icon: React.ComponentType<any>; subtitle: string }[] = [
   { id: "broker", title: "Broker", icon: Briefcase, subtitle: "Channel Partner / Agent" },
   { id: "corporate", title: "Corporate", icon: Building2, subtitle: "HR / Employer" },
-  { id: "referrer", title: "Referrer", icon: UserRound, subtitle: "Buyer / Investor" },
+  { id: "creator", title: "Creator", icon: Sparkles, subtitle: "Influencer / Affiliate" },
+  { id: "builder", title: "Builder", icon: HardHat, subtitle: "Developer / Builder" },
+  { id: "individual", title: "Individual", icon: UserRound, subtitle: "Buyer / Investor" },
 ];
 
 /** Extract the 10-digit Indian mobile number, dropping +91 / 0 prefixes. */
@@ -64,11 +71,10 @@ export default function SignupForm({
   initialReferral?: string;
 }) {
   const [role, setRole] = useState<Role>(
-    initialRole && (["broker", "corporate", "referrer"] as Role[]).includes(initialRole)
-      ? initialRole
-      : "referrer",
+    initialRole && ROLE_IDS.includes(initialRole) ? initialRole : "individual",
   );
-  const [step, setStep] = useState<"form" | "otp">("form");
+  // Role-first flow: pick a profile → fill the form → verify OTP.
+  const [step, setStep] = useState<"role" | "form" | "otp">("role");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -78,6 +84,7 @@ export default function SignupForm({
     pan: "",
     aadhaar: "",
     rera: "",
+    company: "",
     referralCode: initialReferral.toUpperCase(),
     password: "",
   });
@@ -110,6 +117,14 @@ export default function SignupForm({
     }
     if (form.password.length < 8) {
       showAlert({ type: "warning", toast: true, title: "Password too short", text: "Create a password of at least 8 characters." });
+      return;
+    }
+    if (COMPANY_ROLES.includes(role) && !form.company.trim()) {
+      showAlert({ type: "warning", toast: true, title: "Company name required", text: "Enter your company / organisation name." });
+      return;
+    }
+    if (role === "broker" && !form.rera.trim()) {
+      showAlert({ type: "warning", toast: true, title: "RERA number required", text: "Brokers must provide a RERA registration number." });
       return;
     }
 
@@ -240,6 +255,42 @@ export default function SignupForm({
     }
   }
 
+  if (step === "role") {
+    const active = roles.find((r) => r.id === role)!;
+    return (
+      <div className="mt-6 space-y-5">
+        <div>
+          <label className="label">I want to join as</label>
+          <select
+            className="input"
+            value={role}
+            onChange={(e) => setRole(e.target.value as Role)}
+          >
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.title} — {r.subtitle}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="card flex items-center gap-3 p-4">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+            <active.icon className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="font-semibold text-sm">{active.title}</p>
+            <p className="text-xs text-ink-500">{active.subtitle}</p>
+          </div>
+        </div>
+
+        <button type="button" className="btn-primary w-full" onClick={() => { setError(null); setStep("form"); }}>
+          Continue <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
   if (step === "otp") {
     return (
       <>
@@ -281,25 +332,32 @@ export default function SignupForm({
     <>
       <div id="recaptcha-container-signup" />
       <form onSubmit={requestOtp} className="mt-6 space-y-5">
-        <div>
-          <p className="label">I want to sign up as</p>
-          <div className="grid grid-cols-3 gap-2">
-            {roles.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setRole(r.id)}
-                className={`card p-3 text-left transition ${role === r.id ? "ring-2 ring-brand-500 border-brand-300" : "hover:border-ink-200"}`}
-              >
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
-                  <r.icon className="h-4 w-4" />
+        {(() => {
+          const active = roles.find((r) => r.id === role)!;
+          return (
+            <div className="card flex items-center justify-between gap-3 p-3">
+              <span className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                  <active.icon className="h-4 w-4" />
                 </span>
-                <p className="mt-2 font-semibold text-sm">{r.title}</p>
-                <p className="text-[11px] text-ink-500">{r.subtitle}</p>
+                <span>
+                  <p className="font-semibold text-sm">{active.title}</p>
+                  <p className="text-[11px] text-ink-500">{active.subtitle}</p>
+                </span>
+              </span>
+              <button type="button" className="btn-link text-xs" onClick={() => setStep("role")}>
+                Change
               </button>
-            ))}
+            </div>
+          );
+        })()}
+
+        {COMPANY_ROLES.includes(role) && (
+          <div>
+            <label className="label">{role === "builder" ? "Developer / Company name" : "Company / Organisation name"}</label>
+            <input className="input" required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder={role === "builder" ? "e.g. VVIP Group" : "e.g. Acme Pvt Ltd"} />
           </div>
-        </div>
+        )}
 
         <div>
           <label className="label">Full name (as on Aadhaar)</label>

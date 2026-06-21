@@ -24,6 +24,7 @@ const Profile = z.object({
   pan: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "PAN format invalid"),
   aadhaar: z.string().length(12).regex(/^\d{12}$/, "Aadhaar must be 12 digits"),
   rera: z.string().optional().default(""),
+  company: z.string().optional().default(""),
   referralCode: z.string().optional().default(""),
   password: z.string().min(8, "Password must be at least 8 characters").optional(),
 });
@@ -31,7 +32,8 @@ const Profile = z.object({
 const Body = z.object({
   idToken: z.string().min(1),
   mode: z.enum(["signup", "login"]).optional().default("login"),
-  role: z.enum(["broker", "corporate", "referrer"]).optional(),
+  // 'referrer' kept for back-compat with existing accounts.
+  role: z.enum(["broker", "corporate", "creator", "builder", "individual", "referrer"]).optional(),
   profile: Profile.optional(),
 });
 
@@ -241,6 +243,7 @@ export async function POST(req: Request) {
       aadhaar_hash: aadhaarHash,
       aadhaar_last4: aadhaarLast4,
       rera_number: profile.rera || null,
+      company: profile.company || null,
       referred_by: referrerId,
       // Keep employer attribution only when the referrer is a corporate.
       referred_by_corporate: referrerIsCorporate ? referrerId : null,

@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, PlusCircle } from "lucide-react";
 import UserMenu from "./UserMenu";
 import ServicesMenu from "./ServicesMenu";
-import { SERVICES } from "@/lib/services-nav";
+import ProjectsMenu from "./ProjectsMenu";
+import { SERVICES, PROPERTY_CATEGORIES } from "@/lib/services-nav";
 
 const links = [
-  { href: "/projects", label: "Projects" },
   { href: "/buyer-protection", label: "Protection" },
   { href: "/how-it-works", label: "How it works" },
 ];
@@ -15,6 +15,7 @@ const links = [
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [mobileServices, setMobileServices] = useState(false);
+  const [mobileProjects, setMobileProjects] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function Navbar() {
         </Link>
 
         <ul className="hidden lg:flex items-center gap-9 text-[0.82rem] font-medium uppercase tracking-[0.18em] text-ink-600">
+          <li><ProjectsMenu /></li>
           <li><ServicesMenu /></li>
           {links.map((l) => (
             <li key={l.href}>
@@ -64,6 +66,38 @@ export default function Navbar() {
       {open && (
         <div className="lg:hidden bg-ivory/95 backdrop-blur-xl border-t border-ink-900/5 max-h-[80vh] overflow-y-auto">
           <ul className="container py-5 space-y-1">
+            {/* Projects accordion */}
+            <li>
+              <button
+                onClick={() => setMobileProjects((s) => !s)}
+                className="flex w-full items-center justify-between px-3 py-3 rounded-2xl text-sm uppercase tracking-[0.14em] text-ink-700 hover:bg-ink-900/5"
+              >
+                Projects
+                <ChevronDown className={`h-4 w-4 transition-transform ${mobileProjects ? "rotate-180" : ""}`} />
+              </button>
+              {mobileProjects && (
+                <div className="ml-3 pl-3 border-l border-ink-900/5 py-1 space-y-0.5">
+                  {PROPERTY_CATEGORIES.items.map((it) => (
+                    <Link
+                      key={it.label}
+                      href={it.href}
+                      onClick={() => setOpen(false)}
+                      className="block px-2 py-1.5 rounded-xl text-[0.82rem] text-ink-600 hover:bg-ink-900/5"
+                    >
+                      {it.label}
+                    </Link>
+                  ))}
+                  <Link
+                    href="/list-property"
+                    onClick={() => setOpen(false)}
+                    className="mt-2 inline-flex items-center gap-2 px-2 py-1.5 rounded-xl text-[0.82rem] font-semibold text-brand-700 hover:bg-brand-50"
+                  >
+                    <PlusCircle className="h-4 w-4" /> List your property
+                  </Link>
+                </div>
+              )}
+            </li>
+
             {/* Services accordion */}
             <li>
               <button

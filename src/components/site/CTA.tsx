@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import Reveal from "./Reveal";
+import { BlueprintIsoBuilding, BlueprintDimension } from "./Blueprint";
 
 export default function CTA() {
   return (
-    <section className="section relative overflow-hidden bg-brand-700 text-ivory">
+    <section className="section relative overflow-hidden bg-brand-700 text-ivory blueprint-grid-light">
       <div className="absolute inset-0 mesh-bg opacity-40" />
       <div className="absolute inset-0 bg-gradient-to-br from-brand-800/40 to-transparent" />
+      {/* Blueprint wireframe building, anchored bottom-right */}
+      <BlueprintIsoBuilding className="pointer-events-none absolute -bottom-12 right-0 w-[300px] max-w-[44vw] text-ivory/15" />
       <Reveal className="container relative grid lg:grid-cols-12 gap-10 items-center">
         <div className="lg:col-span-8">
-          <span className="text-[0.7rem] font-medium uppercase tracking-[0.2em] text-ivory/70">
-            Begin with PRAP
-          </span>
+          <BlueprintDimension label="Begin with PRAP" className="text-ivory/70" />
           <h2 className="mt-5 font-serif text-4xl md:text-6xl font-light leading-[1.05]">
             Buy property with proof.<br />Verified before you invest.
           </h2>

@@ -20,6 +20,30 @@ Investment tiers (on `total_property_price_inr`):
 - ₹2 Cr – ₹3 Cr → 75,000
 - > ₹3 Cr → 75,000 (top tier retained; extend if/when needed)
 
+## 1b. Broker programme (admin-credited)
+
+A broker joins PRAP with **5 free client slots** to add clients and close deals.
+Credits are triggered by admins from the Bookings panel (idempotent per booking):
+
+| Event                                   | Broker  | Client  | Notes                                            |
+| --------------------------------------- | ------- | ------- | ------------------------------------------------ |
+| Client added + does a **property view** | +25,000 | +25,000 | "Credit view" — consumes one client slot         |
+| **Deal closes**                         | +5,000  | +5,000  | "Close deal" — on first or a later visit         |
+
+- If a deal does **not** close on the first visit, the client gets **3 more
+  visits with no credit**; closing later still pays the close bonus.
+- **Slot refill:** after every **5 closed deals**, the next batch of **5 client
+  slots** unlocks automatically.
+- **Redemption ceiling by deal value:** deal `< ₹1 Cr` → redeem up to **25,000**;
+  deal `≥ ₹1 Cr` → redeem up to **45,000** (`brokerRedeemCap()` in `lib/coins.ts`).
+
+Tracking columns on `users`: `broker_slots_total`, `broker_slots_used`,
+`broker_deals_closed` (see `MIGRATION_BROKER_COINS.sql`). Ledger sources:
+`broker_view_bonus`, `broker_deal_close`.
+
+> The legacy auto-bonus visit logic (`credit_visit` RPC, `VISIT_BONUS`) remains
+> for the corporate/referrer path; the broker path uses the admin buttons above.
+
 ## 2. Spend / Redeem
 
 ### As discount on milestones

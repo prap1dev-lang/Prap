@@ -3,6 +3,7 @@ import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { buildMetadata, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import AlertHost from "@/components/ui/Alert";
+import { BlueprintBackground } from "@/components/site/Blueprint";
 
 // Elegant soft-serif for headings; clean grotesque for body.
 const fraunces = Fraunces({
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <BlueprintBackground />
         {children}
         <AlertHost />
       </body>

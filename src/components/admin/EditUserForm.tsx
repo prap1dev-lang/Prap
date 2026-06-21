@@ -69,7 +69,10 @@ export default function EditUserForm({
           <select name="role" className="input" value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="broker">Broker</option>
             <option value="corporate">Corporate</option>
-            <option value="referrer">Referrer</option>
+            <option value="creator">Creator</option>
+            <option value="builder">Builder</option>
+            <option value="individual">Individual</option>
+            <option value="referrer">Referrer (legacy)</option>
             <option value="admin">Admin</option>
           </select>
         </Field>

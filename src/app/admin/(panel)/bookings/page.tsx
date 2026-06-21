@@ -2,6 +2,7 @@ import { buildMetadata } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdmin } from "@/lib/auth";
 import ConfirmVisitButton from "@/components/admin/ConfirmVisitButton";
+import BrokerDealButtons from "@/components/admin/BrokerDealButtons";
 
 export const metadata = buildMetadata({ title: "Bookings · Admin", path: "/admin/bookings", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export default async function BookingsAdmin() {
   const { data: rows } = await sb
     .from("bookings")
     .select(`
-      id, status, visits_completed, scheduled_at, created_at,
+      id, status, visits_completed, scheduled_at, created_at, broker_id,
       project:projects ( name, city ),
       broker:users!bookings_broker_id_fkey ( name ),
       client:users!bookings_client_id_fkey ( name, aadhaar_last4 )
@@ -35,7 +36,8 @@ export default async function BookingsAdmin() {
               <th className="px-5 py-3 text-left">Aadhaar last 4</th>
               <th className="px-5 py-3 text-left">Visits</th>
               <th className="px-5 py-3 text-left">Status</th>
-              <th className="px-5 py-3 text-left">Action</th>
+              <th className="px-5 py-3 text-left">Visit</th>
+              <th className="px-5 py-3 text-left">Broker deal</th>
             </tr>
           </thead>
           <tbody>
@@ -49,16 +51,24 @@ export default async function BookingsAdmin() {
                 <td className="px-5 py-3">{r.visits_completed}</td>
                 <td className="px-5 py-3"><span className="badge">{r.status}</span></td>
                 <td className="px-5 py-3">
-                  <ConfirmVisitButton
-                    bookingId={r.id}
-                    nextVisitNo={(r.visits_completed ?? 0) + 1}
-                    clientName={r.client?.name ?? "client"}
-                  />
+                  {/* Broker bookings use the View/Close flow instead of visit bonuses. */}
+                  {r.broker_id ? (
+                    <span className="text-[11px] text-ink-400">Broker flow →</span>
+                  ) : (
+                    <ConfirmVisitButton
+                      bookingId={r.id}
+                      nextVisitNo={(r.visits_completed ?? 0) + 1}
+                      clientName={r.client?.name ?? "client"}
+                    />
+                  )}
+                </td>
+                <td className="px-5 py-3">
+                  <BrokerDealButtons bookingId={r.id} hasBroker={!!r.broker_id} />
                 </td>
               </tr>
             ))}
             {(!rows || rows.length === 0) && (
-              <tr><td colSpan={8} className="px-5 py-10 text-center text-ink-500">No bookings yet.</td></tr>
+              <tr><td colSpan={9} className="px-5 py-10 text-center text-ink-500">No bookings yet.</td></tr>
             )}
           </tbody>
         </table>

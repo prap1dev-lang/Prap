@@ -64,7 +64,7 @@ async function updateUser(formData: FormData): Promise<{ ok: true } | { ok: fals
   const email = String(formData.get("email") || "").trim();
   const role = String(formData.get("role") || "").trim();
   const confirmAdmin = String(formData.get("confirmAdmin") || "") === "yes";
-  const allowedRoles = ["broker", "corporate", "referrer", "admin"];
+  const allowedRoles = ["broker", "corporate", "creator", "builder", "individual", "referrer", "admin"];
   if (role && !allowedRoles.includes(role)) return { ok: false, error: "Invalid role" };
 
   const sb = supabaseAdmin();

@@ -16,21 +16,27 @@ export function serviceSlug(label: string) {
 
 const E = (label: string): ServiceItem => ({ label, href: `/services/${serviceSlug(label)}` });
 
+/**
+ * Property categories — moved OUT of the Services mega-menu into the navbar
+ * "Projects" dropdown. Kept here so the public /services/[slug] explore pages
+ * still resolve their slugs.
+ */
+export const PROPERTY_CATEGORIES: ServiceColumn = {
+  title: "Properties",
+  icon: Building2,
+  items: [
+    { label: "All Projects", href: "/projects" },
+    E("Apartments"), E("Villas & Independent Houses"), E("Builder Floors"),
+    E("Residential Plots"), E("Ultra Luxury Apartments"), E("Affordable Housing"),
+    E("Office Spaces"), E("Retail Shops"), E("Commercial Plots"),
+    E("Co-working Spaces"), E("Warehouses"),
+    E("Pre-Launch Projects"), E("New Launch Projects"),
+    E("Under Construction Projects"), E("Ready-to-Move Properties"),
+  ],
+};
+
 /** Public services mega-menu — grouped into columns for the navbar dropdown. */
 export const SERVICES: ServiceColumn[] = [
-  {
-    title: "Properties",
-    icon: Building2,
-    items: [
-      { label: "All Projects", href: "/projects" },
-      E("Apartments"), E("Villas & Independent Houses"), E("Builder Floors"),
-      E("Residential Plots"), E("Luxury Homes"), E("Affordable Housing"),
-      E("Office Spaces"), E("Retail Shops"), E("Commercial Plots"),
-      E("Co-working Spaces"), E("Warehouses"),
-      E("Pre-Launch Projects"), E("New Launch Projects"),
-      E("Under Construction Projects"), E("Ready-to-Move Properties"),
-    ],
-  },
   {
     title: "AI Property Tools",
     icon: Sparkles,
@@ -98,7 +104,7 @@ export const SERVICES: ServiceColumn[] = [
 
 /** Flat lookup for the public explore/service page. */
 export function findService(slug: string): { label: string; group: string } | null {
-  for (const col of SERVICES) {
+  for (const col of [PROPERTY_CATEGORIES, ...SERVICES]) {
     for (const it of col.items) {
       if (it.href === `/services/${slug}`) return { label: it.label, group: col.title };
     }

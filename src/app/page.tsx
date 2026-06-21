@@ -2,6 +2,9 @@ import Navbar from "@/components/site/Navbar";
 import Hero from "@/components/site/Hero";
 import TrustBar from "@/components/site/TrustBar";
 import ProjectsShowcase from "@/components/site/ProjectsShowcase";
+import ProjectRail from "@/components/site/ProjectRail";
+import { BlueprintDivider } from "@/components/site/Blueprint";
+import { listProjects } from "@/lib/projects-db";
 import BuyerServices from "@/components/site/BuyerServices";
 import HowItWorks from "@/components/site/HowItWorks";
 import RewardCalculator from "@/components/site/RewardCalculator";
@@ -19,16 +22,24 @@ export const metadata = buildMetadata({
   keywords: ["property in noida", "buy flat greater noida", "real estate rewards india"],
 });
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [highDemand, newlyLaunched] = await Promise.all([
+    listProjects({ highDemand: true, limit: 10 }),
+    listProjects({ newlyLaunched: true, limit: 10 }),
+  ]);
+
   return (
     <>
       <Navbar />
       <main>
         <Hero />
         <TrustBar />
+        <ProjectRail eyebrow="Trending now" title="Projects in High Demand" projects={highDemand} />
+        <ProjectRail eyebrow="Just launched" title="Newly Launched" projects={newlyLaunched} />
         <ProjectsShowcase />
         <BuyerServices />
         <HowItWorks />
+        <div className="container py-2"><BlueprintDivider className="h-4 w-full text-brand-900/15" /></div>
         <RewardCalculator />
         <EmiCalculator />
         <CTA />

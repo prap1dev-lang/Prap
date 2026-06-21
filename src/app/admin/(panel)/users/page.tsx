@@ -52,6 +52,9 @@ export default async function UsersPage({ searchParams }: { searchParams?: SP })
             <option value="">All roles</option>
             <option value="broker">Broker</option>
             <option value="corporate">Corporate</option>
+            <option value="creator">Creator</option>
+            <option value="builder">Builder</option>
+            <option value="individual">Individual</option>
             <option value="referrer">Referrer</option>
             <option value="admin">Admin</option>
           </select>

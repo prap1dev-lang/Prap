@@ -23,7 +23,27 @@ export const COIN = {
     UNLOCK_AFTER_PAYMENT_PCT: 0.5, // only after 50% property payment is paid
   },
   PAYMENT_SCHEDULE: [0.5, 0.25, 0.25] as const, // 50 / 25 / 25
+
+  // ── Broker programme (admin-credited) ──
+  BROKER: {
+    FREE_SLOTS_BATCH: 5,         // client slots granted per batch (start + each refill)
+    DEALS_PER_REFILL: 5,         // close this many deals to unlock the next batch
+    VIEW_BONUS: 25_000,          // credited to BOTH broker & client on a property view
+    DEAL_CLOSE_BONUS: 5_000,     // credited to BOTH broker & client when a deal closes
+    FREE_VISITS_AFTER_FIRST: 3,  // extra no-credit visits if not closed on first visit
+    // Redemption ceiling depends on the deal value.
+    REDEEM_BELOW_1CR: 25_000,
+    REDEEM_AT_OR_ABOVE_1CR: 45_000,
+    ONE_CRORE_INR: 1_00_00_000,
+  },
 } as const;
+
+/** Max coins a broker may redeem against a deal of the given value. */
+export function brokerRedeemCap(dealValueInr: number): number {
+  return dealValueInr >= COIN.BROKER.ONE_CRORE_INR
+    ? COIN.BROKER.REDEEM_AT_OR_ABOVE_1CR
+    : COIN.BROKER.REDEEM_BELOW_1CR;
+}
 
 export function investmentBonus(investmentInr: number): number {
   for (const tier of COIN.INVESTMENT_TIERS) {

@@ -1,0 +1,31 @@
+// Indian banks & housing-finance lenders offering home-loan tie-ups.
+// Used by the project wizard (loan-partner multi-select) and the public
+// "List Property" form.
+export const INDIAN_BANKS: string[] = [
+  "State Bank of India (SBI)",
+  "HDFC Bank",
+  "ICICI Bank",
+  "Axis Bank",
+  "Punjab National Bank (PNB)",
+  "Bank of Baroda",
+  "Kotak Mahindra Bank",
+  "Canara Bank",
+  "Union Bank of India",
+  "Bank of India",
+  "IDBI Bank",
+  "IndusInd Bank",
+  "Yes Bank",
+  "IDFC First Bank",
+  "Federal Bank",
+  "Indian Bank",
+  "Central Bank of India",
+  "UCO Bank",
+  "Bank of Maharashtra",
+  "Punjab & Sind Bank",
+  "LIC Housing Finance",
+  "PNB Housing Finance",
+  "Bajaj Housing Finance",
+  "Tata Capital Housing Finance",
+  "Aditya Birla Housing Finance",
+  "L&T Finance",
+];

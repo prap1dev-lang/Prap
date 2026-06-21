@@ -2,10 +2,12 @@
 import { useState, useRef } from "react";
 import {
   CheckCircle2, ChevronRight, ChevronLeft, Loader2, Upload, X,
-  Building2, Scale, Home, DollarSign, Star, Wrench, MapPin,
+  Building2, Scale, Home, Star, Wrench, MapPin,
   TrendingUp, ShieldCheck, Eye, FileText, Check,
 } from "lucide-react";
 import { AMENITY_GROUPS } from "@/lib/amenities";
+import { INDIAN_BANKS } from "@/lib/banks";
+import { PROPERTY_TYPES, subtypesFor } from "@/lib/property-types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -36,12 +38,14 @@ interface FormState {
   location: string;
   city: string;
   sector: string;
-  projectType: string;
+  projectType: string;   // Residential | Commercial
+  subType: string;       // depends on projectType
   totalLandArea: string;
   towers: string;
   floors: string;
   totalUnits: string;
   status: string;
+  startingPrice: string; // kept here so listing cards can show "From ₹…"
 
   // Step 2 — Legal & Approvals
   reraNumber: string;
@@ -63,19 +67,7 @@ interface FormState {
   liftsPerTower: string;
   vaastuFacing: string;
 
-  // Step 4 — Pricing & Payment
-  bsp: string;
-  startingPrice: string;
-  maxPrice: string;
-  plcCharges: string;
-  parkingCharges: string;
-  clubMembership: string;
-  maintenanceCharges: string;
-  paymentPlan: string;
-  bookingAmount: string;
-  additionalCosts: string;
-
-  // Step 5 — Amenities
+  // Step 4 — Amenities
   clubhouseDetails: string;
   swimmingPool: string;
   gymnasium: string;
@@ -87,7 +79,7 @@ interface FormState {
   smartHome: string;
   powerBackup: string;
 
-  // Step 6 — Construction, Location & Investment
+  // Step 5 — Construction, Location & Investment
   flooringSpec: string;
   kitchenSpec: string;
   bathroomFittings: string;
@@ -106,7 +98,7 @@ interface FormState {
   builderTrackRecord: string;
   densityPlanning: string;
 
-  // Step 7 — Safety, Buyer Checks & Media
+  // Step 6 — Safety, Buyer Checks & Media
   fireSafety: string;
   cctvSecurity: string;
   gatedFeatures: string;
@@ -121,18 +113,18 @@ interface FormState {
   description: string;
   highlights: string;
   isListed: boolean;
+  isHighDemand: boolean;    // shows in the "Projects in High Demand" rail
+  isNewlyLaunched: boolean; // shows in the "Newly Launched" rail
 }
 
 const INITIAL: FormState = {
   name: "", builder: "", location: "", city: "Noida", sector: "",
-  projectType: "Residential", totalLandArea: "", towers: "", floors: "",
-  totalUnits: "", status: "under_construction",
+  projectType: "Residential", subType: "", totalLandArea: "", towers: "", floors: "",
+  totalUnits: "", status: "under_construction", startingPrice: "",
   reraNumber: "", authorityApprovals: "", landOwnership: "", bankLoanPartners: "",
   environmentApproval: "", fireApproval: "", completionTimeline: "", possessionDate: "",
   configurations: "", superArea: "", carpetArea: "", ceilingHeight: "", balconyArea: "",
   unitsPerFloor: "", liftsPerTower: "", vaastuFacing: "",
-  bsp: "", startingPrice: "", maxPrice: "", plcCharges: "", parkingCharges: "",
-  clubMembership: "", maintenanceCharges: "", paymentPlan: "", bookingAmount: "", additionalCosts: "",
   clubhouseDetails: "", swimmingPool: "", gymnasium: "", sportsFacilities: "",
   kidsPlayArea: "", landscapedGreens: "", joggingTrack: "", securityFeatures: "",
   smartHome: "", powerBackup: "",
@@ -145,6 +137,7 @@ const INITIAL: FormState = {
   waterSewage: "", openAreaPercent: "", greenBeltFacing: "", fourSideOpen: "",
   ventilationPlan: "", sampleFlat: "", exitResalePolicy: "",
   description: "", highlights: "", isListed: true,
+  isHighDemand: false, isNewlyLaunched: false,
 };
 
 // ─── Steps definition ─────────────────────────────────────────────────────────
@@ -156,10 +149,9 @@ const STEPS = [
   { id: 1, title: "Basic Details", icon: Building2, color: "bg-sky-100 text-sky-700" },
   { id: 2, title: "Legal & RERA", icon: Scale, color: "bg-violet-100 text-violet-700" },
   { id: 3, title: "Property Profile", icon: Home, color: "bg-emerald-100 text-emerald-700" },
-  { id: 4, title: "Pricing & Charges", icon: DollarSign, color: "bg-amber-100 text-amber-700" },
-  { id: 5, title: "Amenities", icon: Star, color: "bg-pink-100 text-pink-700" },
-  { id: 6, title: "Locality & Investment", icon: MapPin, color: "bg-teal-100 text-teal-700" },
-  { id: 7, title: "Photos & Publish", icon: ShieldCheck, color: "bg-indigo-100 text-indigo-700" },
+  { id: 4, title: "Amenities", icon: Star, color: "bg-pink-100 text-pink-700" },
+  { id: 5, title: "Locality & Investment", icon: MapPin, color: "bg-teal-100 text-teal-700" },
+  { id: 6, title: "Photos & Publish", icon: ShieldCheck, color: "bg-indigo-100 text-indigo-700" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,7 +209,9 @@ function Select({ value, onChange, options }: {
 
 // Predefined unit-size / configuration options for projects.
 const CONFIG_OPTIONS = [
-  "1 RK", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK",
+  "1 RK", "1 BHK", "2 BHK", "2 BHK + Study", "3 BHK", "3 BHK + Study",
+  "3 BHK + Servant Room", "3 BHK + Servant + Powder Room",
+  "4 BHK", "4 BHK + Servant Room", "4 BHK + Servant + Powder Room", "5 BHK",
   "Penthouse", "Duplex", "Villa", "Bungalow", "Studio Apartment",
   "Shop / Retail", "Office Space", "Plot",
 ];
@@ -563,7 +557,9 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
   // Overall completion: share of fillable fields that have a value, including
   // the four media uploads. `isListed` is a default toggle and not counted.
   const completion = (() => {
-    const textFields = Object.entries(form).filter(([k]) => k !== "isListed");
+    const textFields = Object.entries(form).filter(
+      ([k]) => !["isListed", "isHighDemand", "isNewlyLaunched"].includes(k),
+    );
     const filledText = textFields.filter(
       ([, v]) => typeof v === "string" && v.trim() !== "",
     ).length;
@@ -700,13 +696,19 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
         {step === 1 && (
           <StepShell title="Basic Details" subtitle="Tell us about your project — like posting on 99acres.">
             <div className="mb-6 space-y-5">
-              <Field label="Property Type *" hint="What kind of project is this?">
-                <ButtonGroup value={form.projectType} onChange={set("projectType")} options={[
-                  { value: "Residential", label: "Residential" },
-                  { value: "Commercial", label: "Commercial" },
-                  { value: "Mixed Use", label: "Mixed Use" },
-                  { value: "Plots", label: "Plots / Villas" },
-                ]} />
+              <Field label="What kind of property is this? *" hint="Choose Residential or Commercial">
+                <ButtonGroup
+                  value={form.projectType}
+                  onChange={(v) => { set("projectType")(v); set("subType")(""); }}
+                  options={PROPERTY_TYPES.map((t) => ({ value: t, label: t }))}
+                />
+              </Field>
+              <Field label="Property sub-type" hint="Pick the option that best fits">
+                <ButtonGroup
+                  value={form.subType}
+                  onChange={set("subType")}
+                  options={subtypesFor(form.projectType).map((s) => ({ value: s, label: s }))}
+                />
               </Field>
               <Field label="Project Status *" hint="Current construction stage">
                 <ButtonGroup value={form.status} onChange={set("status")} options={[
@@ -764,6 +766,9 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="Total Number of Units">
                 <Input value={form.totalUnits} onChange={set("totalUnits")} placeholder="e.g. 800" type="number" />
               </Field>
+              <Field label="Starting Price (₹)" hint="Shown as “From ₹…” on listing cards">
+                <Input value={form.startingPrice} onChange={set("startingPrice")} placeholder="e.g. 9500000" type="number" />
+              </Field>
             </div>
           </StepShell>
         )}
@@ -775,15 +780,35 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="RERA Registration Number *">
                 <Input value={form.reraNumber} onChange={set("reraNumber")} placeholder="UPRERAPRJXXXXXX" mono />
               </Field>
-              <Field label="Authority Approvals" hint="e.g. GNIDA, YEIDA, HPDA — comma separated">
-                <Input value={form.authorityApprovals} onChange={set("authorityApprovals")} placeholder="GNIDA, YEIDA" />
+              <Field label="Authority Approval">
+                <Select value={form.authorityApprovals} onChange={set("authorityApprovals")} options={[
+                  { value: "", label: "Select…" },
+                  { value: "GNIDA", label: "GNIDA" },
+                  { value: "YEIDA", label: "YEIDA" },
+                  { value: "Noida Authority", label: "Noida Authority" },
+                  { value: "HPDA", label: "HPDA" },
+                  { value: "GDA", label: "GDA" },
+                  { value: "DDA", label: "DDA" },
+                  { value: "Other", label: "Other" },
+                ]} />
               </Field>
               <Field label="Land Ownership Details">
-                <Input value={form.landOwnership} onChange={set("landOwnership")} placeholder="Freehold / Leasehold" />
+                <Select value={form.landOwnership} onChange={set("landOwnership")} options={[
+                  { value: "", label: "Select…" },
+                  { value: "Freehold", label: "Freehold" },
+                  { value: "Leasehold", label: "Leasehold" },
+                  { value: "Collaboration", label: "Collaboration / JV" },
+                  { value: "Power of Attorney", label: "Power of Attorney" },
+                  { value: "Other", label: "Other" },
+                ]} />
               </Field>
-              <Field label="Bank Loan Approval Partners" hint="Comma-separated bank names">
-                <Input value={form.bankLoanPartners} onChange={set("bankLoanPartners")} placeholder="SBI, HDFC, ICICI" />
+            </div>
+            <div className="mt-5">
+              <Field label="Bank Loan Approval Partners" hint="Select all banks/lenders offering loans on this project">
+                <MultiSelectChips value={form.bankLoanPartners} onChange={set("bankLoanPartners")} options={INDIAN_BANKS} />
               </Field>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5 mt-5">
               <Field label="Environmental Clearance">
                 <Select value={form.environmentApproval} onChange={set("environmentApproval")} options={[
                   { value: "", label: "Select…" },
@@ -922,48 +947,8 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
           </StepShell>
         )}
 
-        {/* ── STEP 4: Pricing & Payment ── */}
+        {/* ── STEP 4: Amenities ── */}
         {step === 4 && (
-          <StepShell title="Pricing & Payment Information" subtitle="All cost components and payment terms.">
-            <div className="grid sm:grid-cols-2 gap-5">
-              <Field label="BSP / Price per sq.ft. (₹)">
-                <Input value={form.bsp} onChange={set("bsp")} placeholder="e.g. 6500" type="number" />
-              </Field>
-              <Field label="Starting Price (₹) *">
-                <Input value={form.startingPrice} onChange={set("startingPrice")} placeholder="e.g. 9500000" type="number" />
-              </Field>
-              <Field label="Max Price (₹)">
-                <Input value={form.maxPrice} onChange={set("maxPrice")} placeholder="e.g. 32000000" type="number" />
-              </Field>
-              <Field label="PLC Charges" hint="Preferential location charges">
-                <Input value={form.plcCharges} onChange={set("plcCharges")} placeholder="e.g. ₹150/sq.ft." />
-              </Field>
-              <Field label="Car Parking Charges">
-                <Input value={form.parkingCharges} onChange={set("parkingCharges")} placeholder="e.g. ₹3,00,000" />
-              </Field>
-              <Field label="Club Membership Charges">
-                <Input value={form.clubMembership} onChange={set("clubMembership")} placeholder="e.g. ₹1,50,000" />
-              </Field>
-              <Field label="Maintenance Charges (per sq.ft./month)">
-                <Input value={form.maintenanceCharges} onChange={set("maintenanceCharges")} placeholder="e.g. ₹3/sq.ft./month" />
-              </Field>
-              <Field label="Booking Amount">
-                <Input value={form.bookingAmount} onChange={set("bookingAmount")} placeholder="e.g. ₹5,00,000" />
-              </Field>
-            </div>
-            <div className="mt-5 grid sm:grid-cols-2 gap-5">
-              <Field label="Payment Plan" hint="e.g. 10:80:10, construction-linked, subvention">
-                <Textarea value={form.paymentPlan} onChange={set("paymentPlan")} placeholder="10% on booking, 80% linked to construction milestones, 10% on possession…" rows={3} />
-              </Field>
-              <Field label="Additional / Hidden Costs to Note">
-                <Textarea value={form.additionalCosts} onChange={set("additionalCosts")} placeholder="GST, stamp duty, legal charges…" rows={3} />
-              </Field>
-            </div>
-          </StepShell>
-        )}
-
-        {/* ── STEP 5: Amenities ── */}
-        {step === 5 && (
           <StepShell title="Amenities & Lifestyle Features" subtitle="Select all amenities this project offers — these show as icon tags on the website.">
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
@@ -1009,8 +994,8 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
           </StepShell>
         )}
 
-        {/* ── STEP 6: Construction, Location & Investment ── */}
-        {step === 6 && (
+        {/* ── STEP 5: Construction, Location & Investment ── */}
+        {step === 5 && (
           <StepShell title="Location, Construction & Investment" subtitle="Specifications, connectivity and investment outlook.">
             <SectionHeading icon={Wrench} label="Construction Specifications" />
             <div className="grid sm:grid-cols-2 gap-5 mt-4">
@@ -1077,8 +1062,8 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
           </StepShell>
         )}
 
-        {/* ── STEP 7: Safety, Buyer Checks & Media ── */}
-        {step === 7 && (
+        {/* ── STEP 6: Safety, Buyer Checks & Media ── */}
+        {step === 6 && (
           <StepShell title="Safety, Buyer Checks & Media" subtitle="Final checks, description and file uploads.">
             <SectionHeading icon={ShieldCheck} label="Safety & Maintenance" />
             <div className="grid sm:grid-cols-2 gap-5 mt-4">
@@ -1192,7 +1177,7 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               </dl>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
               <label className="flex items-center gap-3 text-sm text-ink-700 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1201,6 +1186,24 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                   onChange={(e) => set("isListed")(e.target.checked)}
                 />
                 <span><span className="font-semibold">Publish immediately</span> — uncheck to save as draft</span>
+              </label>
+              <label className="flex items-center gap-3 text-sm text-ink-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="accent-brand-600 h-4 w-4"
+                  checked={form.isHighDemand}
+                  onChange={(e) => set("isHighDemand")(e.target.checked)}
+                />
+                <span><span className="font-semibold">Mark as “In High Demand”</span> — shows in the High Demand carousel</span>
+              </label>
+              <label className="flex items-center gap-3 text-sm text-ink-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="accent-brand-600 h-4 w-4"
+                  checked={form.isNewlyLaunched}
+                  onChange={(e) => set("isNewlyLaunched")(e.target.checked)}
+                />
+                <span><span className="font-semibold">Mark as “Newly Launched”</span> — shows in the Newly Launched carousel</span>
               </label>
             </div>
 

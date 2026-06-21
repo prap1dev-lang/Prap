@@ -15,6 +15,11 @@ export type Project = {
   gallery: string[];
   description: string;
   status: "Under Construction" | "Ready to Move" | "New Launch";
+  // Admin-curated carousel flags (from the project wizard, stored in meta).
+  highDemand?: boolean;
+  newlyLaunched?: boolean;
+  // Residential/Commercial sub-type (e.g. "Flat / Apartment", "Office").
+  subType?: string;
   // BHK-wise unit types (optional — present on DB-backed projects).
   unitTypes?: UnitType[];
   // Selected amenity tag ids (from the amenities catalogue).
