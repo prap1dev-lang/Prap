@@ -27,7 +27,7 @@ export default async function EditProject({ params }: Params) {
 
   // Strip non-form meta keys (arrays/urls handled separately) so only scalar
   // text fields are spread into FormState.
-  const { floorPlans: _fp, brochureUrl: _bu, unitTypes: _ut, ...m } = rawMeta;
+  const { floorPlans: _fp, brochureUrl: _bu, unitTypes: _ut, localityInsights: _li, ...m } = rawMeta;
 
   const toFile = (url: string, i = 0) => ({ name: url.split("/").pop() || `file-${i}`, url, publicId: url });
 
@@ -56,6 +56,7 @@ export default async function EditProject({ params }: Params) {
     brochure: rawMeta.brochureUrl ? toFile(rawMeta.brochureUrl) : null,
     unitTypes: Array.isArray(rawMeta.unitTypes) ? rawMeta.unitTypes : undefined,
     amenityTags: Array.isArray(rawMeta.amenityTags) ? rawMeta.amenityTags : [],
+    insights: Array.isArray(rawMeta.localityInsights) ? rawMeta.localityInsights : [],
   };
 
   return (

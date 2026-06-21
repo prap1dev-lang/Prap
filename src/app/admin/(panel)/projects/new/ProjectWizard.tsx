@@ -7,7 +7,11 @@ import {
 } from "lucide-react";
 import { AMENITY_GROUPS } from "@/lib/amenities";
 import { INDIAN_BANKS } from "@/lib/banks";
+import { INDIAN_BUILDERS } from "@/lib/builders";
 import { PROPERTY_TYPES, subtypesFor } from "@/lib/property-types";
+
+// A nearby point-of-interest with its straight-line distance.
+interface LocalityPoi { key: string; label: string; name: string; km: number; text: string }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +42,7 @@ interface FormState {
   location: string;
   city: string;
   sector: string;
+  pincode: string;
   projectType: string;   // Residential | Commercial
   subType: string;       // depends on projectType
   totalLandArea: string;
@@ -118,7 +123,7 @@ interface FormState {
 }
 
 const INITIAL: FormState = {
-  name: "", builder: "", location: "", city: "Noida", sector: "",
+  name: "", builder: "", location: "", city: "Noida", sector: "", pincode: "",
   projectType: "Residential", subType: "", totalLandArea: "", towers: "", floors: "",
   totalUnits: "", status: "under_construction", startingPrice: "",
   reraNumber: "", authorityApprovals: "", landOwnership: "", bankLoanPartners: "",
@@ -168,8 +173,8 @@ function Field({
   );
 }
 
-function Input({ value, onChange, placeholder = "", type = "text", mono = false }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; mono?: boolean;
+function Input({ value, onChange, placeholder = "", type = "text", mono = false, list }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; mono?: boolean; list?: string;
 }) {
   return (
     <input
@@ -178,6 +183,7 @@ function Input({ value, onChange, placeholder = "", type = "text", mono = false 
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      list={list}
     />
   );
 }
@@ -487,6 +493,7 @@ export interface ProjectInitial {
   brochure?: UploadedFile | null;
   unitTypes?: UnitType[];
   amenityTags?: string[];
+  insights?: LocalityPoi[];
 }
 
 export default function ProjectWizard({ initial }: { initial?: ProjectInitial } = {}) {
@@ -502,6 +509,9 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
     initial?.unitTypes && initial.unitTypes.length ? initial.unitTypes : [{ ...EMPTY_UNIT }],
   );
   const [amenityTags, setAmenityTags] = useState<string[]>(initial?.amenityTags ?? []);
+  const [insights, setInsights] = useState<LocalityPoi[]>(initial?.insights ?? []);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -518,6 +528,51 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
 
   const toggleAmenity = (id: string) =>
     setAmenityTags((tags) => (tags.includes(id) ? tags.filter((t) => t !== id) : [...tags, id]));
+
+  // ── Auto-fetch neighbourhood: address/pincode → geocode → nearby POIs ──
+  async function fetchInsights() {
+    setInsightsError(null);
+    setInsightsLoading(true);
+    try {
+      const res = await fetch("/api/property-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: form.location, pincode: form.pincode, city: form.city }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || "Could not fetch locality details.");
+      const list: LocalityPoi[] = body.insights || [];
+      setInsights(list);
+
+      // Auto-fill the connectivity text fields (these render on the website
+      // and in the admin panel via the shared Location & Connectivity section).
+      const find = (k: string) => list.find((i) => i.key === k);
+      type TextKey = "metroDistance" | "airportConnectivity" | "nearbySchoolsHospitals" | "nearbyMalls";
+      const set2 = (k: TextKey, v: string) =>
+        setForm((f) => ({ ...f, [k]: f[k] ? f[k] : v }));
+      const metro = find("metro") || find("railwayStation");
+      if (metro) set2("metroDistance", `${metro.name} — ${metro.text}`);
+      const air = find("airport");
+      if (air) set2("airportConnectivity", `${air.name} — ${air.text}`);
+      const sch = find("school");
+      const hosp = find("hospital");
+      if (sch || hosp) {
+        const parts = [sch && `${sch.name} ${sch.text}`, hosp && `${hosp.name} ${hosp.text}`].filter(Boolean);
+        set2("nearbySchoolsHospitals", parts.join(", "));
+      }
+      const mall = find("mall");
+      if (mall) set2("nearbyMalls", `${mall.name} — ${mall.text}`);
+
+      // Append a connectivity summary to the description when it's empty.
+      if (body.summary && !form.description.trim()) {
+        setForm((f) => ({ ...f, description: body.summary }));
+      }
+    } catch (e: any) {
+      setInsightsError(e?.message || "Could not fetch locality details.");
+    } finally {
+      setInsightsLoading(false);
+    }
+  }
 
   // ── Geo-locate: fetch device GPS → reverse-geocode → fill city/locality ──
   const [geoLoading, setGeoLoading] = useState(false);
@@ -587,6 +642,7 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
         // Only send rows that have at least a configuration selected.
         unitTypes: unitTypes.filter((u) => u.config.trim() !== ""),
         amenityTags,
+        localityInsights: insights,
       };
       const res = await fetch(
         isEdit ? `/api/admin/projects/${initial!.slug}` : "/api/admin/projects",
@@ -735,8 +791,11 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="Project Name *">
                 <Input value={form.name} onChange={set("name")} placeholder="e.g. VVIP Namah" />
               </Field>
-              <Field label="Developer / Builder Name *">
-                <Input value={form.builder} onChange={set("builder")} placeholder="e.g. VVIP Group" />
+              <Field label="Developer / Builder Name *" hint="Start typing — pick from India's builders or enter your own">
+                <Input value={form.builder} onChange={set("builder")} placeholder="e.g. VVIP Group" list="builder-list" />
+                <datalist id="builder-list">
+                  {INDIAN_BUILDERS.map((b) => <option key={b} value={b} />)}
+                </datalist>
               </Field>
               <Field label="Project Location / Address *">
                 <Input value={form.location} onChange={set("location")} placeholder="Plot No. 5, Sector 16C…" />
@@ -754,6 +813,9 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="Sector / Locality">
                 <Input value={form.sector} onChange={set("sector")} placeholder="Sector 16C" />
               </Field>
+              <Field label="PIN Code" hint="Used to auto-detect nearby landmarks">
+                <Input value={form.pincode} onChange={set("pincode")} placeholder="e.g. 201301" type="text" />
+              </Field>
               <Field label="Total Land Area">
                 <Input value={form.totalLandArea} onChange={set("totalLandArea")} placeholder="e.g. 10 acres" />
               </Field>
@@ -769,6 +831,35 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="Starting Price (₹)" hint="Shown as “From ₹…” on listing cards">
                 <Input value={form.startingPrice} onChange={set("startingPrice")} placeholder="e.g. 9500000" type="number" />
               </Field>
+            </div>
+
+            {/* Auto-fetch nearby landmarks from the address / PIN code */}
+            <div className="mt-6 rounded-xl border border-ink-200 bg-ink-50/40 p-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-sm font-semibold text-ink-800">Nearby landmarks &amp; connectivity</p>
+                  <p className="text-xs text-ink-400">Auto-detects railway, airport, schools, temples, hospitals, malls &amp; EV charging by the property location.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchInsights}
+                  disabled={insightsLoading}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 transition disabled:opacity-60"
+                >
+                  {insightsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                  {insightsLoading ? "Detecting…" : "Auto-fetch nearby"}
+                </button>
+              </div>
+              {insightsError && <p className="mt-2 text-xs text-rose-600">{insightsError}</p>}
+              {insights.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {insights.map((i) => (
+                    <span key={i.key} className="inline-flex items-center gap-1.5 rounded-full bg-white border border-ink-200 px-3 py-1 text-xs text-ink-700">
+                      <span className="font-medium">{i.label}:</span> {i.text}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </StepShell>
         )}

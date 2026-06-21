@@ -7,6 +7,7 @@ export const ProjectBody = z.object({
   builder: z.string().min(1),
   city: z.string().min(1),
   sector: z.string().optional().default(""),
+  pincode: z.string().optional().default(""),
   location: z.string().optional().default(""),
   projectType: z.string().optional().default("Residential"),
   subType: z.string().optional().default(""),
@@ -90,6 +91,20 @@ export const ProjectBody = z.object({
   // Selected amenity tag ids (from the amenities catalogue)
   amenityTags: z.array(z.string()).optional().default([]),
 
+  // Auto-fetched nearby landmarks (railway, airport, schools, temple, …)
+  localityInsights: z
+    .array(
+      z.object({
+        key: z.string(),
+        label: z.string(),
+        name: z.string().optional().default(""),
+        km: z.number().optional().default(0),
+        text: z.string().optional().default(""),
+      }),
+    )
+    .optional()
+    .default([]),
+
   // BHK-wise unit types (multiple per property)
   unitTypes: z
     .array(
@@ -153,6 +168,8 @@ export function buildProjectRow(d: ProjectPayload) {
       floors: d.floors,
       totalUnits: d.totalUnits,
       location: d.location,
+      pincode: d.pincode,
+      localityInsights: d.localityInsights,
       authorityApprovals: d.authorityApprovals,
       landOwnership: d.landOwnership,
       bankLoanPartners: d.bankLoanPartners,

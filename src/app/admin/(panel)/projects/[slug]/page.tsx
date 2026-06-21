@@ -212,6 +212,19 @@ export default async function AdminProjectDetail({ params }: Params) {
           ),
         })),
         {
+          id: "neighbourhood", title: "Neighbourhood & connectivity", icon: <FileText className="h-5 w-5" />,
+          filled: Array.isArray(m.localityInsights) && m.localityInsights.length > 0, content: (
+            <div className="flex flex-wrap gap-2">
+              {(m.localityInsights ?? []).map((i: any) => (
+                <span key={i.key} className="inline-flex items-center gap-1.5 rounded-full bg-ink-50 border border-ink-200 px-3 py-1 text-sm text-ink-700">
+                  <span className="font-semibold text-ink-900">{i.label}</span>
+                  <span className="text-ink-400">·</span>{i.text}
+                </span>
+              ))}
+            </div>
+          ),
+        },
+        {
           id: "description", title: "Description", icon: <Info className="h-5 w-5" />, filled: !!p.description, content: (
             <p className="text-sm text-ink-700 whitespace-pre-line leading-relaxed">{p.description}</p>
           ),

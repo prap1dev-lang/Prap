@@ -152,6 +152,24 @@ export default async function ProjectPage({ params }: Params) {
             })}
           </div>
 
+          {/* ── Neighbourhood & connectivity (auto-detected) ── */}
+          {Array.isArray(m.localityInsights) && m.localityInsights.length > 0 && (
+            <div className="card mt-4 p-4 sm:p-5">
+              <p className="text-xs uppercase tracking-wider text-ink-500 flex items-center gap-1 mb-3">
+                <MapPin className="h-3.5 w-3.5" /> Neighbourhood &amp; connectivity
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {m.localityInsights.map((i: any) => (
+                  <span key={i.key} className="inline-flex items-center gap-1.5 rounded-full bg-ink-50 border border-ink-200 px-3 py-1 text-xs sm:text-sm text-ink-700">
+                    <span className="font-semibold text-ink-900">{i.label}</span>
+                    <span className="text-ink-400">·</span>
+                    {i.text}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mt-6 sm:mt-8">
             {/* ── Main column ── */}
             <div className="lg:col-span-8 space-y-6">
