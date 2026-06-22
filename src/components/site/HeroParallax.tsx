@@ -15,6 +15,31 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  * when idle. A light pointer parallax adds depth. Honours reduced-motion.
  */
 
+/**ye
+ * Hand-sketch city skyline used as the *fill* of the big PRAP wordmark
+ * (via background-clip: text). Generated as an inline SVG so it needs no asset.
+ * To use your own image instead, replace SKYLINE_URL with `url('/your-image.png')`.
+ */
+function buildSkylineSVG(): string {
+  const W = 1400, H = 480, ground = 430, ink = "#1a1f18";
+  const buildings: [number, number, number][] = [
+    [30, 120, 250], [165, 92, 170], [270, 70, 330], [352, 110, 220], [474, 82, 360],
+    [568, 130, 195], [710, 92, 300], [812, 70, 250], [892, 120, 350], [1024, 92, 205],
+    [1126, 82, 300], [1218, 110, 255], [1338, 60, 360],
+  ];
+  let b = "";
+  for (const [x, w, h] of buildings) {
+    const top = ground - h;
+    b += `<rect x="${x}" y="${top}" width="${w}" height="${h}"/>`;
+    for (let y = top + 26; y < ground; y += 26) b += `<line x1="${x}" y1="${y}" x2="${x + w}" y2="${y}"/>`;
+    for (let mx = x + 22; mx < x + w; mx += 22) b += `<line x1="${mx}" y1="${top}" x2="${mx}" y2="${ground}"/>`;
+  }
+  const cloud = (cx: number, cy: number, s: number) =>
+    `<path d="M${cx} ${cy} c${10 * s},-${18 * s} ${38 * s},-${18 * s} ${48 * s},-${2 * s} c${14 * s},-${12 * s} ${40 * s},-${6 * s} ${40 * s},${12 * s} c${16 * s},${2 * s} ${16 * s},${20 * s} -${2 * s},${22 * s} h-${92 * s} c-${20 * s},0 -${20 * s},-${26 * s} ${6 * s},-${32 * s}z"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#e9f0f6"/><g fill="none" stroke="${ink}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${cloud(110, 95, 1)}${cloud(610, 60, 0.8)}${cloud(1050, 80, 1)}<g opacity="0.9">${b}</g><line x1="0" y1="${ground}" x2="${W}" y2="${ground}" stroke-width="2.6"/><g stroke-dasharray="18 12" opacity="0.65"><line x1="0" y1="${ground + 22}" x2="${W}" y2="${ground + 22}"/><line x1="0" y1="${ground + 44}" x2="${W}" y2="${ground + 44}"/></g></g></svg>`;
+}
+const SKYLINE_URL = `url("data:image/svg+xml,${encodeURIComponent(buildSkylineSVG())}")`;
+
 /** One soft, blurred cloud puff. */
 function Puff({ className = "", style }: { className?: string; style: React.CSSProperties }) {
   return (
@@ -107,14 +132,22 @@ export default function HeroParallax() {
         <Puff style={{ top: "6%", left: "44%", width: 280, height: 100, opacity: 0.5 }} />
       </div>
 
-      {/* ── Big wordmark (outline) ── */}
-      <div className="hero-wordmark pointer-events-none absolute inset-0 z-[3] flex flex-col items-center justify-center" aria-hidden="true">
+      {/* ── Big wordmark — skyline sketch shows through the PRAP letters ── */}
+      <div className="hero-wordmark pointer-events-none absolute inset-x-0 bottom-0 z-[3] flex flex-col items-center justify-end pb-[5vh]" aria-hidden="true">
         <span
           className="font-display font-extrabold leading-none tracking-tight"
           style={{
-            fontSize: "clamp(5rem, 22vw, 19rem)",
+            fontSize: "clamp(3.5rem, 19vw, 15rem)",
+            // Drop an image at public/skyline-sketch.png to override the fill —
+            // a missing file just 404s and the generated sketch (SKYLINE_URL) shows.
+            backgroundImage: `url('/skyline-sketch.png'), ${SKYLINE_URL}`,
+            backgroundSize: "cover, cover",
+            backgroundPosition: "center 80%, center 80%",
+            backgroundRepeat: "no-repeat, no-repeat",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
             color: "transparent",
-            WebkitTextStroke: "2px rgba(26,31,24,0.55)",
+            WebkitTextStroke: "1px rgba(26,31,24,0.4)",
           }}
         >
           PRAP
@@ -122,11 +155,11 @@ export default function HeroParallax() {
         <span
           className="font-display font-semibold uppercase"
           style={{
-            fontSize: "clamp(1.1rem, 4.6vw, 3.6rem)",
-            letterSpacing: "0.04em",
+            fontSize: "clamp(0.95rem, 4vw, 3rem)",
+            letterSpacing: "0.06em",
             color: "transparent",
-            WebkitTextStroke: "1px rgba(26,31,24,0.4)",
-            marginTop: "-0.3em",
+            WebkitTextStroke: "1px rgba(26,31,24,0.35)",
+            marginTop: "-0.2em",
           }}
         >
           Real Estate
@@ -150,8 +183,8 @@ export default function HeroParallax() {
       {/* Bottom fade into the page */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-40 bg-gradient-to-b from-transparent to-ivory" aria-hidden="true" />
 
-      {/* ── Foreground copy ── */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
+      {/* ── Foreground copy (top band, clear of the wordmark below) ── */}
+      <div className="relative z-10 flex h-full flex-col items-center justify-start px-6 pt-[13vh] sm:pt-[15vh] text-center">
         <div className="hero-copy max-w-3xl">
           <span className="inline-block text-[0.72rem] font-semibold uppercase tracking-[0.32em] text-ink-700/80">
             PRAP · Property Referral Award Program
