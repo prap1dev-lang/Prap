@@ -187,7 +187,7 @@ export default function HeroParallax() {
       <div className="relative z-10 flex h-full flex-col items-center justify-start px-6 pt-[13vh] sm:pt-[15vh] text-center">
         <div className="hero-copy max-w-3xl">
           <span className="inline-block text-[0.72rem] font-semibold uppercase tracking-[0.32em] text-ink-700/80">
-            PRAP · Property Referral Award Program
+            Property Referral Award Program
           </span>
           {/* <h1 className="font-display font-extrabold tracking-tight text-ink-950 mt-5 text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95]">
             Find What Moves You
