@@ -1,10 +1,9 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { BlueprintIsoBuilding } from "./Blueprint";
 
 /**
  * Layered parallax hero (findrealestate.com-style) for PRAP.
@@ -50,7 +49,6 @@ export default function HeroParallax() {
         y: "+=10", duration: 7, ease: "sine.inOut", repeat: -1, yoyo: true,
         stagger: { each: 0.6, from: "random" },
       });
-      gsap.to(".hero-building", { y: "+=8", duration: 6, ease: "sine.inOut", repeat: -1, yoyo: true });
 
       // ── Entrance ──
       gsap.from(".hero-copy > *", { y: 26, opacity: 0, duration: 1, ease: "expo.out", stagger: 0.12, delay: 0.1 });
@@ -62,7 +60,6 @@ export default function HeroParallax() {
       });
       tl.to(".hero-sky", { yPercent: 14, ease: "none" }, 0)
         .to(".hero-clouds-back", { yPercent: -26, ease: "none" }, 0)
-        .to(".hero-building", { yPercent: -16, scale: 1.07, ease: "none" }, 0)
         .to(".hero-clouds-front", { yPercent: 42, ease: "none" }, 0)
         .to(".hero-smoke", { yPercent: 60, ease: "none" }, 0)
         .to(".hero-wordmark", { yPercent: -34, scale: 1.14, ease: "none" }, 0)
@@ -70,15 +67,12 @@ export default function HeroParallax() {
 
       // ── Light pointer parallax ──
       const el = root.current!;
-      const building = el.querySelector<HTMLElement>(".hero-building");
       const front = el.querySelector<HTMLElement>(".hero-clouds-front");
       const word = el.querySelector<HTMLElement>(".hero-wordmark");
-      const xB = building ? gsap.quickTo(building, "x", { duration: 0.8, ease: "power3.out" }) : null;
       const xF = front ? gsap.quickTo(front, "x", { duration: 0.9, ease: "power3.out" }) : null;
       const xW = word ? gsap.quickTo(word, "x", { duration: 0.7, ease: "power3.out" }) : null;
       const onMove = (e: PointerEvent) => {
         const dx = (e.clientX / window.innerWidth - 0.5) * 2; // -1..1
-        xB?.(dx * 14);
         xF?.(dx * 26);
         xW?.(dx * -10);
       };
@@ -113,12 +107,7 @@ export default function HeroParallax() {
         <Puff style={{ top: "6%", left: "44%", width: 280, height: 100, opacity: 0.5 }} />
       </div>
 
-      {/* ── Architectural sketch building ── */}
-      <div className="hero-building pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex justify-center" aria-hidden="true">
-        <BlueprintIsoBuilding className="w-[min(880px,118vw)] translate-y-[14%] text-ink-800/70" strokeWidth={1.1} />
-      </div>
-
-      {/* ── Big wordmark (outline, building shows behind) ── */}
+      {/* ── Big wordmark (outline) ── */}
       <div className="hero-wordmark pointer-events-none absolute inset-0 z-[3] flex flex-col items-center justify-center" aria-hidden="true">
         <span
           className="font-display font-extrabold leading-none tracking-tight"
@@ -170,9 +159,15 @@ export default function HeroParallax() {
           <h1 className="font-display font-extrabold tracking-tight text-ink-950 mt-5 text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95]">
             Find What Moves You
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg sm:text-xl text-ink-700">
-            <span className="font-semibold text-ink-900">RERA-verified homes. Real rewards.</span>{" "}
-            <span className="text-ink-500">A clear path to what&apos;s next.</span>
+          <p className="mx-auto mt-5 max-w-xl text-lg sm:text-xl font-semibold text-ink-900">
+            Built for a smarter way to discover, verify, and invest.
+          </p>
+          <p className="mt-2 text-lg sm:text-2xl text-ink-700">
+            <span className="text-ink-500">A smarter platform&nbsp;</span>
+            <Typewriter
+              words={["for brokers", "for builders", "for creators", "for investors"]}
+              className="font-semibold text-brand-700"
+            />
           </p>
           <div className="mt-9 flex items-center justify-center gap-4">
             <Link
@@ -185,5 +180,59 @@ export default function HeroParallax() {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Rotating typewriter — types each word, pauses, deletes, moves to the next,
+ * looping forever, with a blinking caret. Falls back to static text under
+ * prefers-reduced-motion.
+ */
+function Typewriter({ words, className = "" }: { words: string[]; className?: string }) {
+  const [text, setText] = useState("");
+  const [idx, setIdx] = useState(0);
+  const [phase, setPhase] = useState<"typing" | "pausing" | "deleting">("typing");
+  const reduce = useRef(false);
+
+  useEffect(() => {
+    reduce.current =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  useEffect(() => {
+    const word = words[idx % words.length];
+    if (reduce.current) {
+      if (text !== word) setText(word);
+      return;
+    }
+    let t: ReturnType<typeof setTimeout>;
+    if (phase === "typing") {
+      t = text.length < word.length
+        ? setTimeout(() => setText(word.slice(0, text.length + 1)), 80)
+        : setTimeout(() => setPhase("pausing"), 1500);
+    } else if (phase === "pausing") {
+      t = setTimeout(() => setPhase("deleting"), 500);
+    } else {
+      if (text.length > 0) {
+        t = setTimeout(() => setText(word.slice(0, text.length - 1)), 40);
+      } else {
+        setIdx((i) => (i + 1) % words.length);
+        setPhase("typing");
+        return;
+      }
+    }
+    return () => clearTimeout(t);
+  }, [text, phase, idx, words]);
+
+  return (
+    <span className={className}>
+      {text}
+      <span
+        className="ml-0.5 inline-block w-[2px] translate-y-[2px] animate-pulse bg-current"
+        style={{ height: "1em" }}
+        aria-hidden="true"
+      />
+    </span>
   );
 }
