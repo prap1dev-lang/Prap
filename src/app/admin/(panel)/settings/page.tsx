@@ -1,30 +1,23 @@
 import { buildMetadata } from "@/lib/seo";
+import { requireAdmin } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import PasswordCard from "@/components/dashboard/PasswordCard";
 
-export const metadata = buildMetadata({ title: "Settings · Admin", path: "/admin/settings", noIndex: true });
+export const metadata = buildMetadata({ title: "Password · Admin", path: "/admin/settings", noIndex: true });
+export const dynamic = "force-dynamic";
 
-export default function Page() {
+export default async function Page() {
+  const me = await requireAdmin();
+  const sb = supabaseAdmin();
+  const { data } = await sb.from("users").select("has_password").eq("id", me.authId).maybeSingle();
+
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Platform settings</h1>
-      <p className="mt-2 text-ink-500">Tunable parameters and integrations.</p>
-      <div className="card mt-6 p-6 grid gap-4">
-        <Row k="SMS gateway" v="Firebase (active)" />
-        <Row k="Email provider" v="Resend (active)" />
-        <Row k="Payment gateway" v="Razorpay (test mode)" />
-        <Row k="RERA verification" v="Manual (queue)" />
-        <Row k="Onboarding bonus" v="25,000 coins" />
-        <Row k="Visit bonus" v="10,000 / 5,000 (referrer / corporate) — visits 1 & 2" />
-        <Row k="Redemption cap" v="50% of balance, ₹1,00,000 max" />
+    <div className="max-w-2xl">
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Account</h1>
+      <p className="mt-2 text-ink-500">Change the password you use to sign in to the admin panel.</p>
+      <div className="mt-6">
+        <PasswordCard hasPassword={!!data?.has_password} />
       </div>
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-center justify-between border-b border-ink-100 pb-3 last:border-0 last:pb-0">
-      <span className="text-ink-500">{k}</span>
-      <span className="font-semibold">{v}</span>
     </div>
   );
 }

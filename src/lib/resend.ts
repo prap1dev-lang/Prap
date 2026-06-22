@@ -168,6 +168,26 @@ export async function sendRedemptionConfirmation(opts: {
   });
 }
 
+export async function sendQueryAck(opts: { to: string; name: string; intent?: string }) {
+  const html = wrap(`
+    <h1 style="font-size:22px;margin:0 0 8px;color:#1B4332">Thank you for reaching out 🙏</h1>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 16px">
+      Hi ${opts.name}, thank you for querying on our platform${opts.intent ? ` regarding <strong>${opts.intent}</strong>` : ""}.
+      Our team has received your request and we will shortly reach out to you soon.
+    </p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 8px">
+      In the meantime, you can explore RERA-verified projects and your PRAP Coin rewards on our website.
+    </p>
+    <p style="font-size:13px;color:#6b6f63;margin-top:24px">— Team PRAP</p>
+  `);
+  return sendEmail({
+    to: opts.to,
+    subject: "Thank you for your query — PRAP will reach out soon",
+    html,
+    tag: "query-ack",
+  });
+}
+
 export async function sendCorporateReferralCode(opts: {
   to: string;
   name: string;

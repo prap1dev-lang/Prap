@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Coins, LayoutDashboard, Users, Building2, BookKey, FileCheck, Receipt,
-  Settings, Banknote, Stethoscope, Menu, X, ExternalLink, LogOut, Inbox,
+  KeyRound, Banknote, Menu, X, ExternalLink, LogOut, Inbox, MessageSquare,
 } from "lucide-react";
 import NavProgress from "@/components/admin/NavProgress";
 
@@ -13,12 +13,12 @@ const nav = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/projects", label: "Projects", icon: Building2 },
   { href: "/admin/submissions", label: "Submissions", icon: Inbox },
+  { href: "/admin/queries", label: "Queries", icon: MessageSquare },
   { href: "/admin/bookings", label: "Bookings", icon: BookKey },
   { href: "/admin/ledger", label: "Coin Ledger", icon: FileCheck },
   { href: "/admin/redemptions", label: "Redemptions", icon: Banknote },
   { href: "/admin/payments", label: "Payments", icon: Receipt },
-  { href: "/admin/diagnostics", label: "Diagnostics", icon: Stethoscope },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/settings", label: "Password", icon: KeyRound },
 ];
 
 function isActive(pathname: string, href: string) {

@@ -3,6 +3,7 @@ import { Mail, MapPin, Phone, MessageCircle, CheckCircle2 } from "lucide-react";
 import { waLink, projectEnquiryMessage, WHATSAPP_NUMBER } from "@/lib/whatsapp";
 import { getProjectBySlug } from "@/lib/projects-db";
 import { SITE } from "@/lib/seo";
+import ContactForm from "@/components/site/ContactForm";
 
 export const metadata = buildMetadata({
   title: "Talk to a real-estate expert — PRAP",
@@ -59,44 +60,12 @@ export default async function Page({ searchParams }: { searchParams?: SP }) {
         </div>
       </div>
 
-      <form className="card p-7 space-y-4">
-        <h2 className="font-serif text-2xl font-light">Request a callback</h2>
-        {project && <input type="hidden" name="project" value={project.slug} />}
-        <div>
-          <label className="label">Full name</label>
-          <input className="input" placeholder="Your name" required />
-        </div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label className="label">Phone</label>
-            <input className="input" placeholder="+91…" required />
-          </div>
-          <div>
-            <label className="label">Email</label>
-            <input className="input" type="email" placeholder="you@example.com" />
-          </div>
-        </div>
-        <div>
-          <label className="label">I want to…</label>
-          <select className="input" defaultValue={project ? "Enquire about this project" : "Book a site visit"}>
-            {project && <option>Enquire about this project</option>}
-            <option>Book a site visit</option>
-            <option>Become a Broker / Channel Partner</option>
-            <option>Onboard my company (Corporate Referrer)</option>
-            <option>General enquiry</option>
-          </select>
-        </div>
-        <div>
-          <label className="label">Message</label>
-          <textarea
-            className="input"
-            rows={5}
-            placeholder="Tell us how we can help…"
-            defaultValue={project ? `I'm interested in ${project.name} (${[project.sector, project.city].filter(Boolean).join(", ")}).` : ""}
-          />
-        </div>
-        <button className="btn-primary">Send message</button>
-      </form>
+      <ContactForm
+        projectSlug={project?.slug ?? ""}
+        hasProject={!!project}
+        intentDefault={project ? "Enquire about this project" : "Book a site visit"}
+        messageDefault={project ? `I'm interested in ${project.name} (${[project.sector, project.city].filter(Boolean).join(", ")}).` : ""}
+      />
     </section>
   );
 }
