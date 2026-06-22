@@ -156,10 +156,10 @@ export default function HeroParallax() {
           <span className="inline-block text-[0.72rem] font-semibold uppercase tracking-[0.32em] text-ink-700/80">
             PRAP · Property Referral Award Program
           </span>
-          <h1 className="font-display font-extrabold tracking-tight text-ink-950 mt-5 text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95]">
+          {/* <h1 className="font-display font-extrabold tracking-tight text-ink-950 mt-5 text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[0.95]">
             Find What Moves You
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg sm:text-xl font-semibold text-ink-900">
+          </h1> */}
+          <p className="mx-auto mt-10 max-w-xl text-lg sm:text-xl font-semibold text-ink-900">
             Built for a smarter way to discover, verify, and invest.
           </p>
           <p className="mt-2 text-lg sm:text-2xl text-ink-700">
