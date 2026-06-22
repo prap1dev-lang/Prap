@@ -30,7 +30,7 @@ export default async function AdminProjects() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-8">
       <header className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Projects</h1>

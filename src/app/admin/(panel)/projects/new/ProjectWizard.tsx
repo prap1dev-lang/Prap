@@ -9,6 +9,10 @@ import { AMENITY_GROUPS } from "@/lib/amenities";
 import { INDIAN_BANKS } from "@/lib/banks";
 import { INDIAN_BUILDERS } from "@/lib/builders";
 import { PROPERTY_TYPES, subtypesFor } from "@/lib/property-types";
+import {
+  FACING, FURNISHING, CONSTRUCTION_TYPE, FLOORING, KITCHEN, BATHROOM, VAASTU,
+  PARKING, DOOR_MAIN, DOOR_INTERNAL, WINDOW_MATERIAL, OAP_PERCENT, PRICE_MODE, opt,
+} from "@/lib/listing-options";
 
 // A nearby point-of-interest with its straight-line distance.
 interface LocalityPoi { key: string; label: string; name: string; km: number; text: string }
@@ -51,6 +55,10 @@ interface FormState {
   totalUnits: string;
   status: string;
   startingPrice: string; // kept here so listing cards can show "From ₹…"
+  priceMode: string;     // expected | persqft
+  allInclusive: boolean;
+  taxIncluded: boolean;
+  priceNegotiable: boolean;
 
   // Step 2 — Legal & Approvals
   reraNumber: string;
@@ -58,8 +66,9 @@ interface FormState {
   landOwnership: string;
   bankLoanPartners: string;
   environmentApproval: string;
-  fireApproval: string;
-  completionTimeline: string;
+  ocApproved: string;          // OC approved (Yes/No) — replaces completion timeline
+  completionTimeline: string;  // kept for back-compat (no longer shown)
+  fireApproval: string;        // kept for back-compat (no longer shown)
   possessionDate: string;
 
   // Step 3 — Apartment Details
@@ -71,6 +80,13 @@ interface FormState {
   unitsPerFloor: string;
   liftsPerTower: string;
   vaastuFacing: string;
+  facing: string;              // single facing/direction
+  furnishing: string;
+  constructionType: string;
+  vaastuCompliance: string;
+  ageOfProperty: string;
+  reservedParking: string;     // CSV: Open, Covered
+  videoUrl: string;            // YouTube / property video link
 
   // Step 4 — Amenities
   clubhouseDetails: string;
@@ -92,6 +108,9 @@ interface FormState {
   electricalSpec: string;
   acProvision: string;
   constructionTech: string;
+  doorMain: string;        // CSV
+  doorInternal: string;    // CSV
+  windowMaterial: string;  // CSV
   metroDistance: string;
   nearbyExpressways: string;
   nearbySchoolsHospitals: string;
@@ -115,6 +134,7 @@ interface FormState {
   ventilationPlan: string;
   sampleFlat: string;
   exitResalePolicy: string;
+  bookingAmount: string;
   description: string;
   highlights: string;
   isListed: boolean;
@@ -126,21 +146,25 @@ const INITIAL: FormState = {
   name: "", builder: "", location: "", city: "Noida", sector: "", pincode: "",
   projectType: "Residential", subType: "", totalLandArea: "", towers: "", floors: "",
   totalUnits: "", status: "under_construction", startingPrice: "",
+  priceMode: "expected", allInclusive: false, taxIncluded: false, priceNegotiable: false,
   reraNumber: "", authorityApprovals: "", landOwnership: "", bankLoanPartners: "",
-  environmentApproval: "", fireApproval: "", completionTimeline: "", possessionDate: "",
+  environmentApproval: "", ocApproved: "", completionTimeline: "", fireApproval: "", possessionDate: "",
   configurations: "", superArea: "", carpetArea: "", ceilingHeight: "", balconyArea: "",
   unitsPerFloor: "", liftsPerTower: "", vaastuFacing: "",
+  facing: "", furnishing: "", constructionType: "", vaastuCompliance: "",
+  ageOfProperty: "", reservedParking: "", videoUrl: "",
   clubhouseDetails: "", swimmingPool: "", gymnasium: "", sportsFacilities: "",
   kidsPlayArea: "", landscapedGreens: "", joggingTrack: "", securityFeatures: "",
   smartHome: "", powerBackup: "",
   flooringSpec: "", kitchenSpec: "", bathroomFittings: "", doorWindowQuality: "",
   electricalSpec: "", acProvision: "", constructionTech: "",
+  doorMain: "", doorInternal: "", windowMaterial: "",
   metroDistance: "", nearbyExpressways: "", nearbySchoolsHospitals: "", nearbyMalls: "",
   airportConnectivity: "", futureInfra: "",
   appreciationPotential: "", rentalDemand: "", builderTrackRecord: "", densityPlanning: "",
   fireSafety: "", cctvSecurity: "", gatedFeatures: "", earthquakeResistant: "",
   waterSewage: "", openAreaPercent: "", greenBeltFacing: "", fourSideOpen: "",
-  ventilationPlan: "", sampleFlat: "", exitResalePolicy: "",
+  ventilationPlan: "", sampleFlat: "", exitResalePolicy: "", bookingAmount: "",
   description: "", highlights: "", isListed: true,
   isHighDemand: false, isNewlyLaunched: false,
 };
@@ -574,6 +598,24 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
     }
   }
 
+  // ── Compose Key Highlights from already-filled details ──
+  function autoHighlights() {
+    const parts: string[] = [];
+    if (form.configurations) parts.push(form.configurations.split(",")[0].trim() + " homes");
+    if (form.subType) parts.push(form.subType);
+    if (form.facing) parts.push(`${form.facing} facing`);
+    if (form.furnishing) parts.push(form.furnishing);
+    if (form.startingPrice) parts.push(`From ₹${Number(form.startingPrice).toLocaleString("en-IN")}`);
+    if (form.ocApproved === "Yes") parts.push("OC approved");
+    if (form.reraNumber) parts.push("RERA registered");
+    // Nearest landmarks from the auto-fetched insights.
+    for (const i of insights.slice(0, 2)) parts.push(`${i.label} ${i.text}`);
+    // Top amenities (first 2 by id → label not available here; use raw count).
+    if (amenityTags.length) parts.push(`${amenityTags.length}+ amenities`);
+    const next = Array.from(new Set(parts)).slice(0, 8).join(", ");
+    if (next) set("highlights")(next);
+  }
+
   // ── Geo-locate: fetch device GPS → reverse-geocode → fill city/locality ──
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -768,7 +810,8 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               </Field>
               <Field label="Project Status *" hint="Current construction stage">
                 <ButtonGroup value={form.status} onChange={set("status")} options={[
-                  { value: "new_launch", label: "Pre-launch / New Launch" },
+                  { value: "pre_launch", label: "Pre-launch" },
+                  { value: "new_launch", label: "New Launch" },
                   { value: "under_construction", label: "Under Construction" },
                   { value: "ready_to_move", label: "Ready to Move" },
                 ]} />
@@ -831,6 +874,28 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="Starting Price (₹)" hint="Shown as “From ₹…” on listing cards">
                 <Input value={form.startingPrice} onChange={set("startingPrice")} placeholder="e.g. 9500000" type="number" />
               </Field>
+              <Field label="Price Basis">
+                <ButtonGroup value={form.priceMode} onChange={set("priceMode")} options={PRICE_MODE} />
+              </Field>
+            </div>
+
+            {/* Price flags */}
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+              {([
+                ["allInclusive", "All inclusive"],
+                ["taxIncluded", "Tax & govt. charges included"],
+                ["priceNegotiable", "Price negotiable"],
+              ] as const).map(([k, label]) => (
+                <label key={k} className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="accent-brand-600 h-4 w-4"
+                    checked={form[k]}
+                    onChange={(e) => set(k)(e.target.checked)}
+                  />
+                  {label}
+                </label>
+              ))}
             </div>
 
             {/* Auto-fetch nearby landmarks from the address / PIN code */}
@@ -908,15 +973,12 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                   { value: "Not required", label: "Not required" },
                 ]} />
               </Field>
-              <Field label="Fire NOC / Approval">
-                <Select value={form.fireApproval} onChange={set("fireApproval")} options={[
+              <Field label="OC Approved" hint="Occupancy Certificate received?">
+                <Select value={form.ocApproved} onChange={set("ocApproved")} options={[
                   { value: "", label: "Select…" },
-                  { value: "Approved", label: "Approved" },
-                  { value: "Pending", label: "Pending" },
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" },
                 ]} />
-              </Field>
-              <Field label="Completion Timeline">
-                <Input value={form.completionTimeline} onChange={set("completionTimeline")} placeholder="e.g. Q4 2027" />
               </Field>
               <Field label="Possession Date">
                 <Input value={form.possessionDate} onChange={set("possessionDate")} placeholder="Dec 2027" />
@@ -1019,10 +1081,48 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="Number of Lifts per Tower">
                 <Input value={form.liftsPerTower} onChange={set("liftsPerTower")} placeholder="e.g. 3" type="number" />
               </Field>
-              <Field label="Vaastu / Facing Details">
-                <Input value={form.vaastuFacing} onChange={set("vaastuFacing")} placeholder="e.g. East & North facing, Vaastu compliant" />
+            </div>
+
+            {/* Facing & furnishing */}
+            <div className="mt-6 space-y-5">
+              <Field label="Facing / Direction">
+                <ButtonGroup value={form.facing} onChange={set("facing")} options={opt(FACING)} />
+              </Field>
+              <Field label="Furnishing">
+                <ButtonGroup value={form.furnishing} onChange={set("furnishing")} options={opt(FURNISHING)} />
               </Field>
             </div>
+
+            {/* Construction & finishing specs */}
+            <div className="grid sm:grid-cols-2 gap-5 mt-5">
+              <Field label="Construction Type">
+                <Select value={form.constructionType} onChange={set("constructionType")} options={[{ value: "", label: "Select…" }, ...opt(CONSTRUCTION_TYPE)]} />
+              </Field>
+              <Field label="Age of Property">
+                <Input value={form.ageOfProperty} onChange={set("ageOfProperty")} placeholder="e.g. New / 2 years" />
+              </Field>
+            </div>
+            <div className="mt-5 space-y-5">
+              <Field label="Flooring Specification" hint="Select all that apply">
+                <MultiSelectChips value={form.flooringSpec} onChange={set("flooringSpec")} options={FLOORING} />
+              </Field>
+              <Field label="Kitchen Specification">
+                <ButtonGroup value={form.kitchenSpec} onChange={set("kitchenSpec")} options={opt(KITCHEN)} />
+              </Field>
+              <Field label="Bathroom Fittings">
+                <ButtonGroup value={form.bathroomFittings} onChange={set("bathroomFittings")} options={opt(BATHROOM)} />
+              </Field>
+              <Field label="Vaastu Compliance">
+                <ButtonGroup value={form.vaastuCompliance} onChange={set("vaastuCompliance")} options={opt(VAASTU)} />
+              </Field>
+              <Field label="Reserved Parking" hint="Select all that apply">
+                <MultiSelectChips value={form.reservedParking} onChange={set("reservedParking")} options={PARKING} />
+              </Field>
+              <Field label="Property Video / YouTube Link" hint="Optional — a walkthrough or promo video">
+                <Input value={form.videoUrl} onChange={set("videoUrl")} placeholder="https://youtube.com/watch?v=…" />
+              </Field>
+            </div>
+
             {/* Floor plan uploads */}
             <div className="mt-6">
               <FileUploader
@@ -1088,20 +1188,19 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
         {/* ── STEP 5: Construction, Location & Investment ── */}
         {step === 5 && (
           <StepShell title="Location, Construction & Investment" subtitle="Specifications, connectivity and investment outlook.">
-            <SectionHeading icon={Wrench} label="Construction Specifications" />
-            <div className="grid sm:grid-cols-2 gap-5 mt-4">
-              <Field label="Flooring Specifications">
-                <Input value={form.flooringSpec} onChange={set("flooringSpec")} placeholder="e.g. Italian marble in living, vitrified in bedrooms" />
+            <SectionHeading icon={Wrench} label="Doors, Windows & Construction" />
+            <div className="mt-4 space-y-5">
+              <Field label="Main Door" hint="Select all that apply">
+                <MultiSelectChips value={form.doorMain} onChange={set("doorMain")} options={DOOR_MAIN} />
               </Field>
-              <Field label="Kitchen Specifications">
-                <Input value={form.kitchenSpec} onChange={set("kitchenSpec")} placeholder="e.g. Modular with Hettich fittings" />
+              <Field label="Internal Doors" hint="Select all that apply">
+                <MultiSelectChips value={form.doorInternal} onChange={set("doorInternal")} options={DOOR_INTERNAL} />
               </Field>
-              <Field label="Bathroom Fittings">
-                <Input value={form.bathroomFittings} onChange={set("bathroomFittings")} placeholder="e.g. Jaguar/Kohler CP fittings" />
+              <Field label="Window Material" hint="Select all that apply">
+                <MultiSelectChips value={form.windowMaterial} onChange={set("windowMaterial")} options={WINDOW_MATERIAL} />
               </Field>
-              <Field label="Door & Window Quality">
-                <Input value={form.doorWindowQuality} onChange={set("doorWindowQuality")} placeholder="e.g. UPVC double-glazed windows" />
-              </Field>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5 mt-5">
               <Field label="Electrical Specifications">
                 <Input value={form.electricalSpec} onChange={set("electricalSpec")} placeholder="e.g. Legrand/Havells modular switches" />
               </Field>
@@ -1183,7 +1282,10 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
             <SectionHeading icon={Eye} label="Buyer Verification Checks" className="mt-8" />
             <div className="grid sm:grid-cols-2 gap-5 mt-4">
               <Field label="Open Area Percentage">
-                <Input value={form.openAreaPercent} onChange={set("openAreaPercent")} placeholder="e.g. 72%" />
+                <Select value={form.openAreaPercent} onChange={set("openAreaPercent")} options={[{ value: "", label: "Select…" }, ...opt(OAP_PERCENT)]} />
+              </Field>
+              <Field label="Booking Amount (₹)">
+                <Input value={form.bookingAmount} onChange={set("bookingAmount")} placeholder="e.g. 500000" type="number" />
               </Field>
               <Field label="Green Belt / Park Facing">
                 <Input value={form.greenBeltFacing} onChange={set("greenBeltFacing")} placeholder="e.g. Most towers face central greens" />
@@ -1217,6 +1319,11 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                 <Textarea value={form.description} onChange={set("description")} placeholder="Located on the Yamuna Expressway with unmatched connectivity to Jewar International Airport…" rows={4} />
               </Field>
               <Field label="Key Highlights" hint="Comma-separated short bullets — shown on cards">
+                <div className="flex items-center justify-end mb-1">
+                  <button type="button" onClick={autoHighlights} className="btn-outline text-xs py-1 px-2">
+                    ✨ Auto-generate from details
+                  </button>
+                </div>
                 <Input value={form.highlights} onChange={set("highlights")} placeholder="Earn 75k Coins, 5 min from Expressway, Low density" />
               </Field>
             </div>
