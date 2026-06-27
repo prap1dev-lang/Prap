@@ -32,6 +32,7 @@ export const ProjectBody = z.object({
   allInclusive: z.boolean().optional().default(false),
   taxIncluded: z.boolean().optional().default(false),
   priceNegotiable: z.boolean().optional().default(false),
+  additionalPricing: z.string().optional().default(""),
   bookingAmount: z.string().optional().default(""),
 
   // Apartment specs
@@ -203,6 +204,7 @@ export function buildProjectRow(d: ProjectPayload) {
       allInclusive: d.allInclusive,
       taxIncluded: d.taxIncluded,
       priceNegotiable: d.priceNegotiable,
+      additionalPricing: d.additionalPricing,
       bookingAmount: d.bookingAmount,
       facing: d.facing,
       furnishing: d.furnishing,

@@ -9,10 +9,10 @@ import { destroyCloudinaryUrl } from "@/lib/cloudinary";
 import { ExternalLink, ShieldCheck, AlertTriangle, UserRound } from "lucide-react";
 import ReraVerifyButton from "@/components/admin/ReraVerifyButton";
 import DeleteUserButton from "@/components/admin/DeleteUserButton";
-import KycDecisionButtons from "@/components/admin/KycDecisionButtons";
 import SendResetButton from "@/components/admin/SendResetButton";
 import EditUserForm from "@/components/admin/EditUserForm";
 import DeleteKycDocButton from "@/components/admin/DeleteKycDocButton";
+import KycVerificationSteps from "@/components/admin/KycVerificationSteps";
 
 export const metadata = buildMetadata({ title: "User · Admin", path: "/admin/users", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -150,6 +150,37 @@ async function deleteKycDoc(formData: FormData): Promise<{ ok: true } | { ok: fa
       file_purged: fileResult.ok,
       file_error: fileResult.ok ? undefined : fileResult.error,
     },
+  });
+
+  revalidatePath(`/admin/users/${doc.user_id}`);
+  return { ok: true };
+}
+
+// Step-by-step KYC: mark ONE document verified or not-verified. Used by the
+// verification stepper so an admin can clear each required doc individually
+// before finalising the overall KYC decision.
+async function setDocStatus(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  "use server";
+  await requireAdmin();
+  const docId = String(formData.get("docId") || "");
+  const verified = String(formData.get("verified") || "") === "true";
+  const notes = String(formData.get("notes") || "").trim();
+  if (!docId) return { ok: false, error: "Missing document id" };
+
+  const sb = supabaseAdmin();
+  const { data: doc } = await sb
+    .from("kyc_docs")
+    .select("id, user_id, kind")
+    .eq("id", docId)
+    .maybeSingle();
+  if (!doc) return { ok: false, error: "Document not found" };
+
+  const { error } = await sb.from("kyc_docs").update({ verified }).eq("id", docId);
+  if (error) return { ok: false, error: error.message };
+
+  await sb.from("audit_log").insert({
+    action: verified ? "kyc_doc_verified" : "kyc_doc_unverified",
+    payload: { user_id: doc.user_id, doc_id: docId, kind: doc.kind, notes: notes || undefined },
   });
 
   revalidatePath(`/admin/users/${doc.user_id}`);
@@ -352,20 +383,17 @@ export default async function UserDetail({ params }: { params: { id: string } })
         )}
       </section>
 
-      {u.kyc_status === "pending" && (
-        <section className="card p-6 border-amber-200">
-          <h2 className="font-bold">Approve / Reject KYC</h2>
-          <p className="mt-2 text-sm text-ink-700">
-            Cross-check Aadhaar last 4 against uploaded doc{u.role === "broker" ? " and verify RERA number on the UP-RERA portal" : ""}.
-            Then choose:
-          </p>
-          <form action={setStatus} className="mt-5 space-y-3">
-            <input type="hidden" name="id" value={u.id} />
-            <textarea name="notes" className="input" rows={2} placeholder="Internal notes (optional)" />
-            <KycDecisionButtons />
-          </form>
-        </section>
-      )}
+      {/* Step-by-step verification: clear each required doc, then finalise. */}
+      <KycVerificationSteps
+        userId={u.id}
+        role={u.role}
+        kycStatus={u.kyc_status}
+        docs={(docs ?? []).map((d) => ({
+          id: d.id, kind: d.kind, storage_key: d.storage_key, verified: !!d.verified,
+        }))}
+        setDocStatus={setDocStatus}
+        setStatus={setStatus}
+      />
 
       <section className="card overflow-hidden">
         <div className="p-5 border-b border-ink-100"><h2 className="font-bold">Recent coin activity</h2></div>

@@ -59,6 +59,7 @@ interface FormState {
   allInclusive: boolean;
   taxIncluded: boolean;
   priceNegotiable: boolean;
+  additionalPricing: string;  // optional free-text — extra charges, payment plan etc.
 
   // Step 2 — Legal & Approvals
   reraNumber: string;
@@ -147,6 +148,7 @@ const INITIAL: FormState = {
   projectType: "Residential", subType: "", totalLandArea: "", towers: "", floors: "",
   totalUnits: "", status: "under_construction", startingPrice: "",
   priceMode: "expected", allInclusive: false, taxIncluded: false, priceNegotiable: false,
+  additionalPricing: "",
   reraNumber: "", authorityApprovals: "", landOwnership: "", bankLoanPartners: "",
   environmentApproval: "", ocApproved: "", completionTimeline: "", fireApproval: "", possessionDate: "",
   configurations: "", superArea: "", carpetArea: "", ceilingHeight: "", balconyArea: "",
@@ -856,9 +858,6 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               <Field label="Sector / Locality">
                 <Input value={form.sector} onChange={set("sector")} placeholder="Sector 16C" />
               </Field>
-              <Field label="PIN Code" hint="Used to auto-detect nearby landmarks">
-                <Input value={form.pincode} onChange={set("pincode")} placeholder="e.g. 201301" type="text" />
-              </Field>
               <Field label="Total Land Area">
                 <Input value={form.totalLandArea} onChange={set("totalLandArea")} placeholder="e.g. 10 acres" />
               </Field>
@@ -896,6 +895,18 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                   {label}
                 </label>
               ))}
+            </div>
+
+            {/* Optional extra pricing notes — payment plans, extra charges, offers */}
+            <div className="mt-4">
+              <Field label="Additional Pricing Details" hint="Optional — payment plan, extra charges (PLC, IFMS, parking), current offers">
+                <Textarea
+                  value={form.additionalPricing}
+                  onChange={set("additionalPricing")}
+                  placeholder="e.g. 10:90 payment plan, ₹250/sq.ft. PLC for park-facing, no floor-rise up to 5th floor"
+                  rows={2}
+                />
+              </Field>
             </div>
 
             {/* Auto-fetch nearby landmarks from the address / PIN code */}

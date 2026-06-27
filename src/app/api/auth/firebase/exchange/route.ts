@@ -146,6 +146,10 @@ export async function POST(req: Request) {
 
   // ---- 2. Create or look up the Supabase auth user ----
   let authUserId: string | null = null;
+  // Did THIS request create the auth user? If so and signup later fails, we must
+  // delete it again — otherwise the phone is stuck with an auth user but no
+  // profile row, and can neither sign up (create returns "exists") nor log in.
+  let authUserCreatedNow = false;
   const created = await admin.auth.admin.createUser({
     email: syntheticEmail,
     phone,
@@ -155,6 +159,7 @@ export async function POST(req: Request) {
   });
   if (created.data?.user) {
     authUserId = created.data.user.id;
+    authUserCreatedNow = true;
   } else {
     // Already exists (or a transient create error). The account's auth email may
     // now be the user's REAL email (set when they chose a password), so we resolve
@@ -178,6 +183,15 @@ export async function POST(req: Request) {
     );
   }
 
+  // Roll back a just-created auth user when signup can't complete, so the phone
+  // isn't left half-registered (auth user with no profile = locked out).
+  async function rollbackOrphanAuthUser() {
+    if (authUserCreatedNow && authUserId) {
+      const { error } = await admin.auth.admin.deleteUser(authUserId);
+      if (error) console.error("[exchange] orphan auth user cleanup failed:", error.message);
+    }
+  }
+
   // ---- 3. Profile row (signup) / existence check (login) ----
   const { data: existing } = await admin
     .from("users")
@@ -189,16 +203,39 @@ export async function POST(req: Request) {
 
   if (!existing) {
     if (mode === "login") {
+      await rollbackOrphanAuthUser();
       return NextResponse.json(
         { ok: false, error: "No account found for this phone. Please sign up first." },
         { status: 404 },
       );
     }
     if (!role || !profile) {
+      await rollbackOrphanAuthUser();
       return NextResponse.json(
         { ok: false, error: "Missing signup details." },
         { status: 400 },
       );
+    }
+
+    // ---- Email uniqueness: one email = one account ----
+    // Block a second phone number from signing up with an email already in use
+    // by a different account. The DB has a UNIQUE(email) constraint, but we check
+    // here first to (a) give a clear message and (b) avoid leaving an orphaned
+    // Supabase auth user behind when the later insert would fail.
+    if (profile.email) {
+      const { data: emailOwners } = await admin
+        .from("users")
+        .select("id")
+        .ilike("email", profile.email)
+        .limit(1);
+      const emailOwner = emailOwners?.[0];
+      if (emailOwner && emailOwner.id !== authUserId) {
+        await rollbackOrphanAuthUser();
+        return NextResponse.json(
+          { ok: false, error: "An account already exists with this email. Please log in instead." },
+          { status: 409 },
+        );
+      }
     }
 
     const aadhaarHash = await sha256Hex(profile.aadhaar);
@@ -210,6 +247,7 @@ export async function POST(req: Request) {
     if (profile.referralCode) {
       const owner = await lookupReferralOwner(profile.referralCode);
       if (!owner) {
+        await rollbackOrphanAuthUser();
         return NextResponse.json(
           { ok: false, error: "Invalid or inactive referral code." },
           { status: 400 },
@@ -222,6 +260,7 @@ export async function POST(req: Request) {
         owner.id === authUserId ||
         (owner.aadhaar_hash && owner.aadhaar_hash === aadhaarHash);
       if (samePerson) {
+        await rollbackOrphanAuthUser();
         return NextResponse.json(
           { ok: false, error: "You cannot use your own referral code." },
           { status: 400 },
@@ -256,6 +295,7 @@ export async function POST(req: Request) {
       const e = insertUserErr as any;
       console.error("[exchange] users insert failed:", e);
       const isDup = e.code === "23505";
+      await rollbackOrphanAuthUser();
       return NextResponse.json(
         {
           ok: false,
@@ -277,6 +317,7 @@ export async function POST(req: Request) {
     if (ledgerErr) {
       console.error("[exchange] coin_ledger insert failed:", ledgerErr);
       await admin.from("users").delete().eq("id", authUserId);
+      await rollbackOrphanAuthUser();
       return NextResponse.json({ ok: false, error: (ledgerErr as any).message }, { status: 500 });
     }
 

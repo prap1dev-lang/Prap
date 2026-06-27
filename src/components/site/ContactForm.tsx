@@ -23,6 +23,7 @@ export default function ContactForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -42,6 +43,7 @@ export default function ContactForm({
       if (!res.ok || !body.ok) {
         throw new Error(typeof body.error === "string" ? body.error : "Could not send. Please try again.");
       }
+      setEmailSent(!!body.emailSent);
       setDone(true);
     } catch (e: any) {
       setError(e?.message || "Something went wrong.");
@@ -56,7 +58,7 @@ export default function ContactForm({
         <CheckCircle2 className="h-11 w-11 text-emerald-500 mx-auto" />
         <h2 className="font-serif text-2xl font-light">Thank you for reaching out!</h2>
         <p className="text-ink-600">
-          We&apos;ve received your query{form.email ? " and emailed you a confirmation" : ""}. Our team will reach out to you shortly.
+          We&apos;ve received your query{form.email && emailSent ? ` and sent a confirmation to ${form.email}` : ""}. Our team will reach out to you shortly.
         </p>
       </div>
     );

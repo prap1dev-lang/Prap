@@ -53,14 +53,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || "Could not submit your query" }, { status: 500 });
   }
 
-  // Best-effort thank-you email (never fails the request).
+  // Best-effort thank-you email to the address the user entered (never fails
+  // the request — the query is already saved). We surface whether it sent so
+  // the UI can be honest and mis-configuration is visible, not silent.
+  let emailSent = false;
+  let emailError: string | null = null;
   if (d.email) {
     try {
-      await sendQueryAck({ to: d.email, name: d.name, intent: d.intent });
+      const r = await sendQueryAck({ to: d.email, name: d.name, intent: d.intent });
+      emailSent = r.id !== "noop";
+      if (!emailSent) emailError = "Email provider not configured (RESEND_API_KEY missing).";
     } catch (e: any) {
-      console.error("[contact] ack email failed:", e?.message);
+      emailError = e?.message || "Email send failed";
+      console.error("[contact] ack email to", d.email, "failed:", emailError);
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, emailSent, emailError });
 }

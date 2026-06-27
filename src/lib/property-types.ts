@@ -8,23 +8,22 @@ export const PROPERTY_TYPES: PropertyType[] = ["Residential", "Commercial"];
 
 export const SUBTYPES: Record<PropertyType, string[]> = {
   Residential: [
-    "Flat / Apartment",
+    "Apartment",
+    "Builder Floor",
     "Independent House / Villa",
-    "Independent / Builder Floor",
-    "Plot / Land",
-    "1 RK / Studio Apartment",
-    "Serviced Apartment",
-    "Farmhouse",
-    "Other",
+    "1 RK / Studio",
+    "Farm House",
+    "Residential Plot",
   ],
   Commercial: [
-    "Office",
-    "Retail",
-    "Plot / Land",
-    "Storage",
-    "Industry",
-    "Hospitality",
-    "Other",
+    "Ready to Move Offices",
+    "Bare Shell Office Space",
+    "Commercial / Institutional Land",
+    "Shop / Retail",
+    "Agricultural & Farm Land",
+    "Industrial Plots",
+    "Warehouse",
+    "Cold Storage",
   ],
 };
 

@@ -46,7 +46,11 @@
       "Bash(sed -i 's/mt-2 text-3xl font-extrabold/mt-2 text-2xl sm:text-3xl font-extrabold/g; s/mt-3 text-3xl font-extrabold/mt-3 text-2xl sm:text-3xl font-extrabold/g' src/app/dashboard/page.tsx src/app/dashboard/wallet/page.tsx \"src/app/admin/\\(panel\\)/users/[id]/page.tsx\")",
       "Bash(cd d:/websitem/Prap && rm -f \"src/app/\\(marketing\\)/projects/[slug]/PropertyTabs.tsx\" && echo \"removed PropertyTabs.tsx\")",
       "Bash(cd d:/websitem/Prap && rm -f \"src/app/\\(marketing\\)/projects/[slug]/Accordion.tsx\" && echo \"removed local Accordion\")",
-      "Bash(echo \"=== EXIT $? ===\")"
+      "Bash(echo \"=== EXIT $? ===\")",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4;$env:Path\"; & node \".\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit 2>&1 | Select-Object -First 40; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4;$env:Path\"; & node \".\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --noEmit 2>&1 | Select-Object -First 20; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\varunsingh\\\\AppData\\\\Local\\\\nvm\\\\v20.19.4;$env:Path\"; & node \".\\\\node_modules\\\\next\\\\dist\\\\bin\\\\next\" lint --file \"src/components/admin/KycVerificationSteps.tsx\" --file \"src/app/admin/\\(panel\\)/users/[id]/page.tsx\" 2>&1 | Select-Object -First 40; Write-Output \"EXIT=$LASTEXITCODE\")"
     ],
     "additionalDirectories": [
       "\\tmp",
