@@ -8,6 +8,11 @@ const API_KEY = process.env.RESEND_API_KEY;
 const FROM = process.env.EMAIL_FROM || "PRAP <noreply@prap.in>";
 const ENDPOINT = "https://api.resend.com/emails";
 
+// Where replies and unsubscribe requests go. A real, monitored reply-to address
+// improves sender reputation (silent no-reply senders are downranked).
+const REPLY_TO = process.env.EMAIL_REPLY_TO || "support@prap.in";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://prap.in";
+
 export class ResendError extends Error {
   status: number;
   detail: unknown;
@@ -29,7 +34,45 @@ type SendArgs = {
   text?: string;
   replyTo?: string;
   tag?: string;
+  // Set false for one-to-one transactional mail (receipts, password resets) that
+  // legally need no unsubscribe. Defaults to true so marketing-ish mail (welcome,
+  // referral) carries List-Unsubscribe headers required by Gmail/Yahoo.
+  unsubscribe?: boolean;
 };
+
+/** Derive a plain-text body from HTML. A missing text/plain part is a strong
+ *  spam signal (Gmail/Outlook downrank HTML-only mail), so we always send one. */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<head[\s\S]*?<\/head>/gi, " ")
+    .replace(/<\/(p|div|tr|h1|h2|h3|li|table)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** True if the address has opted out of marketing email. Best-effort: any error
+ *  (incl. a missing email_optouts table) is treated as "not suppressed". */
+async function isSuppressed(email: string): Promise<boolean> {
+  try {
+    // Lazy import keeps this module usable in contexts without the admin client.
+    const { supabaseAdmin } = await import("@/lib/supabase-server");
+    const { data } = await supabaseAdmin()
+      .from("email_optouts")
+      .select("email")
+      .eq("email", email.toLowerCase())
+      .maybeSingle();
+    return !!data;
+  } catch {
+    return false;
+  }
+}
 
 export async function sendEmail(args: SendArgs): Promise<{ id: string }> {
   if (!API_KEY) {
@@ -37,6 +80,28 @@ export async function sendEmail(args: SendArgs): Promise<{ id: string }> {
     console.warn(`[resend] RESEND_API_KEY missing — skipping email "${args.subject}"`);
     return { id: "noop" };
   }
+
+  // Respect unsubscribes for marketing-ish mail. Transactional mail
+  // (unsubscribe === false) is always delivered. Only checked for single
+  // recipients — bulk arrays are assumed pre-filtered by the caller.
+  if (args.unsubscribe !== false && typeof args.to === "string") {
+    if (await isSuppressed(args.to)) {
+      console.warn(`[resend] recipient opted out — skipping "${args.subject}"`);
+      return { id: "suppressed" };
+    }
+  }
+  // Deliverability headers. List-Unsubscribe (+ One-Click) is effectively
+  // mandatory for bulk senders under Gmail/Yahoo's 2024 rules; omitting it is a
+  // strong spam signal. We add it to all but explicitly one-to-one mail.
+  const headers: Record<string, string> = {};
+  if (args.unsubscribe !== false) {
+    const unsubUrl = `${SITE_URL}/api/email/unsubscribe?e=${encodeURIComponent(
+      Array.isArray(args.to) ? args.to[0] : args.to,
+    )}`;
+    headers["List-Unsubscribe"] = `<${unsubUrl}>, <mailto:${REPLY_TO}?subject=unsubscribe>`;
+    headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+  }
+
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: {
@@ -48,8 +113,11 @@ export async function sendEmail(args: SendArgs): Promise<{ id: string }> {
       to: Array.isArray(args.to) ? args.to : [args.to],
       subject: args.subject,
       html: args.html,
-      text: args.text,
-      reply_to: args.replyTo,
+      // Always include a plain-text alternative for deliverability.
+      text: args.text || htmlToText(args.html),
+      // A monitored reply-to beats a silent no-reply for reputation.
+      reply_to: args.replyTo || REPLY_TO,
+      headers: Object.keys(headers).length ? headers : undefined,
       tags: args.tag ? [{ name: "category", value: args.tag }] : undefined,
     }),
     cache: "no-store",
@@ -95,7 +163,7 @@ export async function sendWelcomeEmail(opts: {
 }) {
   const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://prap.in"}/dashboard`;
   const html = wrap(`
-    <h1 style="font-size:22px;margin:0 0 8px;color:#1B4332">Welcome to PRAP, ${opts.name} 👋</h1>
+    <h1 style="font-size:22px;margin:0 0 8px;color:#1B4332">Welcome to PRAP, ${opts.name}</h1>
     <p style="font-size:15px;line-height:1.6;margin:0 0 16px">
       Your account is live as a <strong>${opts.role}</strong>.
       We've credited <strong>${opts.coins.toLocaleString("en-IN")} PRAP Coins</strong> (≈ ₹${opts.coins.toLocaleString("en-IN")}) to your wallet.
@@ -109,7 +177,7 @@ export async function sendWelcomeEmail(opts: {
   `);
   return sendEmail({
     to: opts.to,
-    subject: `Welcome to PRAP — ${opts.coins.toLocaleString("en-IN")} coins credited`,
+    subject: `Welcome to PRAP, ${opts.name}`,
     html,
     tag: "welcome",
   });
@@ -139,9 +207,10 @@ export async function sendPaymentReceipt(opts: {
   `);
   return sendEmail({
     to: opts.to,
-    subject: `Receipt · ${opts.projectName} · ${opts.milestone}`,
+    subject: `Your payment receipt for ${opts.projectName}`,
     html,
     tag: "receipt",
+    unsubscribe: false, // transactional — buyer needs this regardless
   });
 }
 
@@ -162,15 +231,16 @@ export async function sendRedemptionConfirmation(opts: {
   `);
   return sendEmail({
     to: opts.to,
-    subject: `₹${opts.amountInr.toLocaleString("en-IN")} on its way`,
+    subject: `Your PRAP redemption of ₹${opts.amountInr.toLocaleString("en-IN")} is being processed`,
     html,
     tag: "redemption",
+    unsubscribe: false, // transactional payout confirmation
   });
 }
 
 export async function sendQueryAck(opts: { to: string; name: string; intent?: string }) {
   const html = wrap(`
-    <h1 style="font-size:22px;margin:0 0 8px;color:#1B4332">Thank you for reaching out 🙏</h1>
+    <h1 style="font-size:22px;margin:0 0 8px;color:#1B4332">Thank you for reaching out</h1>
     <p style="font-size:15px;line-height:1.6;margin:0 0 16px">
       Hi ${opts.name}, thank you for querying on our platform${opts.intent ? ` regarding <strong>${opts.intent}</strong>` : ""}.
       Our team has received your request and we will shortly reach out to you soon.
@@ -182,9 +252,10 @@ export async function sendQueryAck(opts: { to: string; name: string; intent?: st
   `);
   return sendEmail({
     to: opts.to,
-    subject: "Thank you for your query — PRAP will reach out soon",
+    subject: "We received your query — PRAP will reach out soon",
     html,
     tag: "query-ack",
+    unsubscribe: false, // direct reply to a user-initiated contact request
   });
 }
 

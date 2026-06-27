@@ -5,6 +5,7 @@ import {
   Building2, Scale, Home, Star, Wrench, MapPin,
   TrendingUp, ShieldCheck, Eye, FileText, Check,
 } from "lucide-react";
+import PlacesAutocomplete, { type PlaceResult } from "@/components/ui/PlacesAutocomplete";
 import { AMENITY_GROUPS } from "@/lib/amenities";
 import { INDIAN_BANKS } from "@/lib/banks";
 import { INDIAN_BUILDERS } from "@/lib/builders";
@@ -47,6 +48,8 @@ interface FormState {
   city: string;
   sector: string;
   pincode: string;
+  lat: string;           // from Google Places — exact coords for nearby lookup
+  lng: string;
   projectType: string;   // Residential | Commercial
   subType: string;       // depends on projectType
   totalLandArea: string;
@@ -144,7 +147,7 @@ interface FormState {
 }
 
 const INITIAL: FormState = {
-  name: "", builder: "", location: "", city: "Noida", sector: "", pincode: "",
+  name: "", builder: "", location: "", city: "Noida", sector: "", pincode: "", lat: "", lng: "",
   projectType: "Residential", subType: "", totalLandArea: "", towers: "", floors: "",
   totalUnits: "", status: "under_construction", startingPrice: "",
   priceMode: "expected", allInclusive: false, taxIncluded: false, priceNegotiable: false,
@@ -555,6 +558,20 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
   const toggleAmenity = (id: string) =>
     setAmenityTags((tags) => (tags.includes(id) ? tags.filter((t) => t !== id) : [...tags, id]));
 
+  // ── Apply a Google Places selection to the address fields ──
+  const KNOWN_CITY_SET = ["Noida", "Greater Noida", "Yamuna Expressway", "Gurgaon", "Delhi"];
+  function applyPlace(p: PlaceResult) {
+    setForm((f) => ({
+      ...f,
+      location: p.formatted || f.location,
+      sector: p.locality || f.sector,
+      pincode: p.pincode || f.pincode,
+      city: p.city && KNOWN_CITY_SET.includes(p.city) ? p.city : f.city,
+      lat: p.lat != null ? String(p.lat) : f.lat,
+      lng: p.lng != null ? String(p.lng) : f.lng,
+    }));
+  }
+
   // ── Auto-fetch neighbourhood: address/pincode → geocode → nearby POIs ──
   async function fetchInsights() {
     setInsightsError(null);
@@ -563,7 +580,13 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
       const res = await fetch("/api/property-insights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: form.location, pincode: form.pincode, city: form.city }),
+        body: JSON.stringify({
+          address: form.location,
+          pincode: form.pincode,
+          city: form.city,
+          lat: form.lat ? Number(form.lat) : undefined,
+          lng: form.lng ? Number(form.lng) : undefined,
+        }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) throw new Error(body.error || "Could not fetch locality details.");
@@ -833,8 +856,18 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               {geoError && <span className="text-xs text-rose-600">{geoError}</span>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <Field label="Project Name *">
-                <Input value={form.name} onChange={set("name")} placeholder="e.g. VVIP Namah" />
+              <Field label="Project Name *" hint="Search the project/building on Google, or type it in">
+                <PlacesAutocomplete
+                  value={form.name}
+                  onChange={set("name")}
+                  onSelect={(p) => {
+                    // Picking a known building fills the name + its address & coords.
+                    if (p.name) set("name")(p.name);
+                    applyPlace(p);
+                  }}
+                  placeholder="e.g. VVIP Namah"
+                  types={["establishment"]}
+                />
               </Field>
               <Field label="Developer / Builder Name *" hint="Start typing — pick from India's builders or enter your own">
                 <Input value={form.builder} onChange={set("builder")} placeholder="e.g. VVIP Group" list="builder-list" />
@@ -842,8 +875,13 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                   {INDIAN_BUILDERS.map((b) => <option key={b} value={b} />)}
                 </datalist>
               </Field>
-              <Field label="Project Location / Address *">
-                <Input value={form.location} onChange={set("location")} placeholder="Plot No. 5, Sector 16C…" />
+              <Field label="Project Location / Address *" hint="Search an address, area, locality, sector or PIN code">
+                <PlacesAutocomplete
+                  value={form.location}
+                  onChange={set("location")}
+                  onSelect={applyPlace}
+                  placeholder="Search address, sector, locality or PIN…"
+                />
               </Field>
               <Field label="City *">
                 <Select value={form.city} onChange={set("city")} options={[
@@ -855,8 +893,14 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                   { value: "Other", label: "Other" },
                 ]} />
               </Field>
-              <Field label="Sector / Locality">
-                <Input value={form.sector} onChange={set("sector")} placeholder="Sector 16C" />
+              <Field label="Sector / Locality" hint="Search a sector, area or locality">
+                <PlacesAutocomplete
+                  value={form.sector}
+                  onChange={set("sector")}
+                  onSelect={(p) => { applyPlace(p); if (p.locality) set("sector")(p.locality); }}
+                  placeholder="Sector 16C"
+                  types={["(regions)"]}
+                />
               </Field>
               <Field label="Total Land Area">
                 <Input value={form.totalLandArea} onChange={set("totalLandArea")} placeholder="e.g. 10 acres" />

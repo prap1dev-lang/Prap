@@ -10,7 +10,7 @@ type Kind =
   | "photo"
   | "rera_cert";
 
-const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB — matches the server limit
 
 export default function DocUpload({
   kind,
@@ -32,7 +32,7 @@ export default function DocUpload({
     setError(null);
 
     if (file.size > MAX_BYTES) {
-      setError("File too large (max 2 MB).");
+      setError("File too large (max 10 MB).");
       setStatus("error");
       if (inputRef.current) inputRef.current.value = "";
       return;
@@ -44,7 +44,21 @@ export default function DocUpload({
       fd.set("file", file);
       fd.set("kind", kind);
       const res = await fetch("/api/kyc/upload", { method: "POST", body: fd });
-      const body = await res.json().catch(() => ({}));
+
+      // The server (or platform proxy) may return a non-JSON body on errors such
+      // as a 413 "Request Entity Too Large" — parsing that as JSON would throw a
+      // confusing "Unexpected token" instead of a useful message.
+      const raw = await res.text();
+      let body: any = {};
+      try {
+        body = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error(
+          res.status === 413
+            ? "File is too large to upload (max 10 MB)."
+            : raw.trim() || `Upload failed (HTTP ${res.status})`,
+        );
+      }
       if (!res.ok || !body.ok) throw new Error(body.error || "Upload failed");
       setUrl(body.url);
       setStatus("idle");
@@ -98,7 +112,7 @@ export default function DocUpload({
               <UploadCloud className="h-6 w-6" />
             )}
             <span className="text-sm font-semibold mt-1 text-ink-900">{label}</span>
-            <span className="text-xs mt-0.5">PNG, JPG or PDF · max 2MB</span>
+            <span className="text-xs mt-0.5">PNG, JPG or PDF · max 10MB</span>
           </span>
         )}
 

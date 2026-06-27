@@ -20,6 +20,10 @@ const Body = z.object({
   address: z.string().optional().default(""),
   pincode: z.string().optional().default(""),
   city: z.string().optional().default(""),
+  // When the address was picked via Google Places we already have exact
+  // coordinates — use them directly instead of re-geocoding a fuzzy string.
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 });
 
 type Poi = { name: string; km: number };
@@ -79,15 +83,35 @@ async function overpassNearby(lat: number, lng: number): Promise<Insights> {
   }
   const ql = `[out:json][timeout:25];(${parts.join("")});out center tags;`;
 
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `data=${encodeURIComponent(ql)}`,
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Overpass error ${res.status}`);
-  const data = await res.json().catch(() => ({ elements: [] }));
-  const elements: any[] = data.elements ?? [];
+  // overpass-api.de frequently rate-limits (429) or times out. Try several
+  // public mirrors in turn so the nearby lookup stays reliable.
+  const MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  ];
+  let elements: any[] = [];
+  let lastErr = "";
+  for (const endpoint of MIRRORS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `data=${encodeURIComponent(ql)}`,
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        lastErr = `Overpass ${res.status} @ ${endpoint}`;
+        continue;
+      }
+      const data = await res.json().catch(() => ({ elements: [] }));
+      elements = data.elements ?? [];
+      if (elements.length) break; // got results — stop trying mirrors
+    } catch (e: any) {
+      lastErr = e?.message || `Overpass fetch failed @ ${endpoint}`;
+    }
+  }
+  if (!elements.length && lastErr) throw new Error(lastErr);
 
   const out: Insights = {};
   for (const el of elements) {
@@ -120,14 +144,20 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });
   }
-  const { address, pincode, city } = parsed.data;
-  const query = [address, pincode, city, "India"].filter(Boolean).join(", ");
-  if (!query.replace(/India/g, "").trim().replace(/,/g, "")) {
-    return NextResponse.json({ ok: false, error: "Enter an address or PIN code first." }, { status: 400 });
-  }
+  const { address, pincode, city, lat, lng } = parsed.data;
 
   try {
-    const geo = await geocode(query);
+    // Prefer exact coordinates from Google Places; fall back to geocoding text.
+    let geo: { lat: number; lng: number; formatted: string } | null = null;
+    if (typeof lat === "number" && typeof lng === "number") {
+      geo = { lat, lng, formatted: address || `${lat},${lng}` };
+    } else {
+      const query = [address, pincode, city, "India"].filter(Boolean).join(", ");
+      if (!query.replace(/India/g, "").trim().replace(/,/g, "")) {
+        return NextResponse.json({ ok: false, error: "Enter an address or PIN code first." }, { status: 400 });
+      }
+      geo = await geocode(query);
+    }
     if (!geo) {
       return NextResponse.json({ ok: false, error: "Could not locate that address / PIN code." }, { status: 404 });
     }

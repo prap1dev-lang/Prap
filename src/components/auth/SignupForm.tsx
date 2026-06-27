@@ -4,6 +4,7 @@ import { Briefcase, Building2, UserRound, Sparkles, HardHat, ArrowRight, Loader2
 import { firebaseAuth } from "@/lib/firebase-client";
 import { supabaseBrowser } from "@/lib/supabase";
 import { showAlert } from "@/components/ui/Alert";
+import { friendlyFirebaseError } from "@/lib/firebase-errors";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -18,25 +19,6 @@ const ROLE_IDS: Role[] = ["broker", "corporate", "creator", "builder", "individu
 const COMPANY_ROLES: Role[] = ["builder", "corporate"];
 
 const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
-/** Map Firebase auth error codes to clear, user-facing messages. */
-function friendlyFirebaseError(e: any): string {
-  switch (e?.code) {
-    case "auth/invalid-phone-number":
-      return "That phone number isn't valid. Enter a 10-digit Indian mobile.";
-    case "auth/too-many-requests":
-      return "Too many attempts. Please wait a few minutes and try again.";
-    case "auth/quota-exceeded":
-      return "OTP service is busy right now. Please try again shortly.";
-    case "auth/code-expired":
-    case "auth/session-expired":
-      return "Your code expired. Please request a new OTP.";
-    case "auth/captcha-check-failed":
-      return "Verification failed. Please try again.";
-    default:
-      return e?.message?.replace(/^Firebase:\s*/, "") || "Failed to send OTP";
-  }
-}
 
 const roles: { id: Role; title: string; icon: React.ComponentType<any>; subtitle: string }[] = [
   { id: "broker", title: "Broker", icon: Briefcase, subtitle: "Channel Partner / Agent" },
@@ -311,6 +293,7 @@ export default function SignupForm({
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="• • • • • •"
               inputMode="numeric"
+              autoComplete="one-time-code"
               required
               autoFocus
             />

@@ -4,6 +4,10 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 import { uploadToCloudinary, destroyCloudinaryUrl } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
+// Allow larger document scans (desktop scanners/cameras routinely produce
+// 3–8 MB files). Without this the request can be rejected by the platform body
+// limit before our handler runs, surfacing as a generic "upload failed".
+export const maxDuration = 30;
 
 /**
  * Upload / remove a KYC / profile document for the signed-in user. Files are
@@ -27,7 +31,8 @@ const ALLOWED = new Set([
   "photo",
   "rera_cert",
 ]);
-const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB — desktop scans/PDFs are often >2 MB
+const ACCEPTED_TYPES = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf)$/i;
 
 export async function POST(req: Request) {
   const me = await requireUser();
@@ -36,7 +41,10 @@ export async function POST(req: Request) {
   try {
     formData = await req.formData();
   } catch {
-    return NextResponse.json({ ok: false, error: "Invalid form data" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "Could not read the upload. The file may be too large — try one under 10 MB." },
+      { status: 400 },
+    );
   }
 
   const file = formData.get("file") as File | null;
@@ -49,7 +57,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "No file provided" }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ ok: false, error: "File too large (max 2 MB)" }, { status: 413 });
+    return NextResponse.json({ ok: false, error: "File too large (max 10 MB)" }, { status: 413 });
+  }
+  // Accept common photo/scan/PDF types. Some desktop browsers send an empty or
+  // odd MIME for valid files, so only reject when a type is present AND unknown.
+  if (file.type && !ACCEPTED_TYPES.test(file.type)) {
+    return NextResponse.json(
+      { ok: false, error: "Unsupported file type. Upload a JPG, PNG or PDF." },
+      { status: 415 },
+    );
   }
 
   const admin = supabaseAdmin();

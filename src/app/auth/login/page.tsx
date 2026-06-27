@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, AlertTriangle, Phone } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebase-client";
 import { supabaseBrowser } from "@/lib/supabase";
 import { showAlert } from "@/components/ui/Alert";
+import { friendlyFirebaseError } from "@/lib/firebase-errors";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -96,7 +97,7 @@ export default function LoginPage() {
       confirmationRef.current = result;
       setStep("otp");
     } catch (e: any) {
-      setError((e?.message || "Failed to send OTP").replace(/^Firebase:\s*/, ""));
+      setError(friendlyFirebaseError(e));
       recaptchaRef.current?.clear();
       recaptchaRef.current = null;
     } finally {
@@ -152,7 +153,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      setError((e?.message || "Invalid OTP").replace(/^Firebase:\s*/, ""));
+      setError(friendlyFirebaseError(e));
       setLoading(false);
     }
   }
@@ -274,6 +275,7 @@ export default function LoginPage() {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="• • • • • •"
               inputMode="numeric"
+              autoComplete="one-time-code"
               required
               autoFocus
             />
