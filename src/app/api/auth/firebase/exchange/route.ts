@@ -21,10 +21,17 @@ const Profile = z.object({
   name: z.string().min(2),
   email: z.string().email().or(z.literal("")).optional().default(""),
   phone: z.string().min(8),
-  pan: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "PAN format invalid"),
-  aadhaar: z.string().length(12).regex(/^\d{12}$/, "Aadhaar must be 12 digits"),
+  // PAN / Aadhaar / RERA are NO LONGER collected at signup — users complete KYC
+  // (with documents) from their dashboard afterwards. Kept optional for any
+  // older client that still sends them.
+  pan: z.string().optional().default(""),
+  aadhaar: z.string().optional().default(""),
   rera: z.string().optional().default(""),
   company: z.string().optional().default(""),
+  // Creator social profiles (optional).
+  instagram: z.string().optional().default(""),
+  facebook: z.string().optional().default(""),
+  youtube: z.string().optional().default(""),
   referralCode: z.string().optional().default(""),
   password: z.string().min(8, "Password must be at least 8 characters").optional(),
 });
@@ -238,8 +245,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const aadhaarHash = await sha256Hex(profile.aadhaar);
-    const aadhaarLast4 = profile.aadhaar.slice(-4);
+    // KYC identity is now optional at signup (completed later from the dashboard).
+    const aadhaarHash = profile.aadhaar ? await sha256Hex(profile.aadhaar) : null;
+    const aadhaarLast4 = profile.aadhaar ? profile.aadhaar.slice(-4) : null;
 
     // ---- Referral resolution: ANY user's code can refer ANY new user ----
     let referrerId: string | null = null;
@@ -278,11 +286,15 @@ export async function POST(req: Request) {
       name: profile.name,
       phone: profile.phone,
       email: profile.email || null,
-      pan: profile.pan,
+      pan: profile.pan || null,
       aadhaar_hash: aadhaarHash,
       aadhaar_last4: aadhaarLast4,
       rera_number: profile.rera || null,
       company: profile.company || null,
+      // Creator social profiles (optional).
+      instagram: profile.instagram || null,
+      facebook: profile.facebook || null,
+      youtube: profile.youtube || null,
       referred_by: referrerId,
       // Keep employer attribution only when the referrer is a corporate.
       referred_by_corporate: referrerIsCorporate ? referrerId : null,
@@ -359,19 +371,28 @@ export async function POST(req: Request) {
       // non-fatal: user can still operate; code can be created on demand later
     }
 
-    // ---- Dual referral reward: BOTH parties get a fixed bonus (best-effort) ----
+    // ---- Referral reward: ONLY the sharer (referrer) earns coins, and only for
+    //      their first REFERRAL_MAX_REWARDED (5) successful referrals. The new
+    //      user does NOT get a separate referral bonus — just onboarding coins.
     if (referrerId) {
       try {
-        await creditCoins(admin, authUserId, COIN.REFERRAL_BONUS, "referral_bonus", {
-          notes: "Referral signup bonus",
-          refTable: "users",
-          refId: referrerId,
-        });
-        await creditCoins(admin, referrerId, COIN.REFERRAL_BONUS, "referral_bonus", {
-          notes: `Referral reward — invited ${profile.name}`,
-          refTable: "users",
-          refId: authUserId,
-        });
+        // Count the referrer's already-rewarded signups (this new user is already
+        // inserted with referred_by = referrerId, so subtract 1 for "before").
+        const { count } = await admin
+          .from("users")
+          .select("id", { count: "exact", head: true })
+          .eq("referred_by", referrerId);
+        const priorReferrals = Math.max(0, (count ?? 1) - 1);
+
+        if (priorReferrals < COIN.REFERRAL_MAX_REWARDED) {
+          await creditCoins(admin, referrerId, COIN.REFERRAL_BONUS, "referral_bonus", {
+            notes: `Referral reward — invited ${profile.name}`,
+            refTable: "users",
+            refId: authUserId,
+          });
+        } else {
+          console.info(`[exchange] referrer ${referrerId} past ${COIN.REFERRAL_MAX_REWARDED}-referral cap — no bonus`);
+        }
       } catch (e: any) {
         console.error("[exchange] referral bonus credit failed:", e?.message);
         // non-fatal: onboarding already succeeded

@@ -16,6 +16,9 @@ const Update = z.object({
   upi_id: z.string().max(80).optional(),
   bank_account: z.string().max(40).optional(),
   bank_ifsc: z.string().max(20).optional(),
+  instagram: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
+  facebook: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
+  youtube: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
 });
 
 export async function GET() {

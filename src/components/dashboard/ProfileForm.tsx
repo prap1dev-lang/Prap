@@ -7,12 +7,15 @@ export type Profile = {
   email: string | null;
   phone: string | null;
   pan: string | null;
-  role: "broker" | "corporate" | "referrer" | "admin";
+  role: "broker" | "corporate" | "creator" | "builder" | "individual" | "referrer" | "admin";
   rera_number: string | null;
   upi_id: string | null;
   bank_account: string | null;
   bank_ifsc: string | null;
   photo_url: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  youtube: string | null;
   pan_verified: boolean;
   aadhaar_verified: boolean;
   rera_verified: boolean;
@@ -28,6 +31,9 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
     upi_id: initial.upi_id ?? "",
     bank_account: initial.bank_account ?? "",
     bank_ifsc: initial.bank_ifsc ?? "",
+    instagram: initial.instagram ?? "",
+    facebook: initial.facebook ?? "",
+    youtube: initial.youtube ?? "",
   });
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
@@ -47,6 +53,11 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
         bank_ifsc: form.bank_ifsc,
       };
       if (initial.role === "broker") fields.rera_number = form.rera_number;
+      if (initial.role === "creator") {
+        fields.instagram = form.instagram;
+        fields.facebook = form.facebook;
+        fields.youtube = form.youtube;
+      }
 
       const res = await fetch("/api/profile", {
         method: "PATCH",
@@ -110,6 +121,25 @@ export default function ProfileForm({ initial }: { initial: Profile }) {
           )}
         </div>
       </section>
+
+      {/* Creator social profiles */}
+      {initial.role === "creator" && (
+        <section className="card p-6">
+          <h2 className="font-bold">Social profiles</h2>
+          <p className="mt-1 text-sm text-ink-500">Link your channels so we can feature your creator profile.</p>
+          <div className="mt-4 grid sm:grid-cols-2 gap-4">
+            <Field label="Instagram">
+              <input className="input" value={form.instagram} onChange={(e) => set("instagram", e.target.value)} placeholder="https://instagram.com/yourhandle" />
+            </Field>
+            <Field label="Facebook">
+              <input className="input" value={form.facebook} onChange={(e) => set("facebook", e.target.value)} placeholder="https://facebook.com/yourpage" />
+            </Field>
+            <Field label="YouTube" full>
+              <input className="input" value={form.youtube} onChange={(e) => set("youtube", e.target.value)} placeholder="https://youtube.com/@yourchannel" />
+            </Field>
+          </div>
+        </section>
+      )}
 
       {/* Payout methods */}
       <section className="card p-6">

@@ -22,7 +22,7 @@ export default function ReferralCodeCard({
     ? `${typeof window !== "undefined" ? window.location.origin : "https://prap.in"}/auth/signup?ref=${code}`
     : "";
   const shareText = code
-    ? `Join PRAP with my referral code ${code} — we each get 5,000 PRAP Coins (₹5,000) when you sign up. ${link}`
+    ? `Join PRAP with my referral code ${code} — I get 5,000 PRAP Coins (₹5,000) and you get 20,000 signup coins when you sign up. ${link}`
     : "";
 
   // Auto-fetch a code if the user doesn't have one yet.
@@ -73,7 +73,7 @@ export default function ReferralCodeCard({
             {code ?? "—"}
           </p>
           <p className="mt-2 text-sm text-ink-700">
-            Share your link — you <strong>and</strong> your friend each earn 5,000 PRAP Coins (₹5,000) when they sign up.
+            Share your link — <strong>you earn 5,000 PRAP Coins</strong> (₹5,000) for each friend who signs up (first 5), and they get their 20,000 signup coins.
           </p>
           {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
         </div>

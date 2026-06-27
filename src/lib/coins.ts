@@ -4,9 +4,12 @@
  */
 
 export const COIN = {
-  ONBOARDING_BONUS: 25_000,
-  // Paid to BOTH the referrer and the newly-referred user on successful signup.
+  ONBOARDING_BONUS: 20_000,
+  // Paid ONLY to the referrer (the person who shared their code) when someone
+  // signs up with it. The new user gets just the standard onboarding bonus.
   REFERRAL_BONUS: 5_000,
+  // Max number of referrals that earn the sharer a bonus.
+  REFERRAL_MAX_REWARDED: 5,
   INVESTMENT_TIERS: [
     { upTo: 1_00_00_000, coins: 25_000 },       // ≤ 1 Cr
     { upTo: 2_00_00_000, coins: 50_000 },       // 1 - 2 Cr

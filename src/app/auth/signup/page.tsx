@@ -3,9 +3,9 @@ import SignupForm from "@/components/auth/SignupForm";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Create your PRAP account — get 25,000 coins",
+  title: "Create your PRAP account — get 20,000 coins",
   description:
-    "Sign up on PRAP as a Broker, Corporate or Referrer. Phone OTP + Aadhaar/PAN KYC. 25,000 PRAP Coins credited on successful registration.",
+    "Sign up on PRAP as a Broker, Corporate, Creator, Builder or Individual. 20,000 PRAP Coins credited on successful registration. Complete KYC anytime after.",
   path: "/auth/signup",
   noIndex: true,
 });
@@ -15,7 +15,7 @@ export default function Page({ searchParams }: { searchParams?: { role?: string;
     <div>
       <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Create your PRAP account</h1>
       <p className="mt-2 text-ink-700">
-        Join the platform — 25,000 PRAP Coins (₹25,000) credited on signup.
+        Join the platform — 20,000 PRAP Coins (₹20,000) credited on signup.
       </p>
       <SignupForm
         initialRole={(searchParams?.role as any) || "individual"}

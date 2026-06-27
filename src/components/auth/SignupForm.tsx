@@ -18,8 +18,6 @@ const ROLE_IDS: Role[] = ["broker", "corporate", "creator", "builder", "individu
 /** Roles that supply a company / organisation name. */
 const COMPANY_ROLES: Role[] = ["builder", "corporate"];
 
-const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
 const roles: { id: Role; title: string; icon: React.ComponentType<any>; subtitle: string }[] = [
   { id: "broker", title: "Broker", icon: Briefcase, subtitle: "Channel Partner / Agent" },
   { id: "corporate", title: "Corporate", icon: Building2, subtitle: "HR / Employer" },
@@ -63,10 +61,11 @@ export default function SignupForm({
     name: "",
     phone: "",
     email: "",
-    pan: "",
-    aadhaar: "",
-    rera: "",
     company: "",
+    // Creator social profiles (optional, creator role only).
+    instagram: "",
+    facebook: "",
+    youtube: "",
     referralCode: initialReferral.toUpperCase(),
     password: "",
   });
@@ -89,14 +88,6 @@ export default function SignupForm({
       showAlert({ type: "warning", toast: true, title: "Check your phone number", text: "Enter a valid 10-digit Indian mobile (no leading 0 or +91)." });
       return;
     }
-    if (!PAN_RE.test(form.pan)) {
-      showAlert({ type: "warning", toast: true, title: "Invalid PAN format", text: "Use the format ABCDE1234F (5 letters, 4 digits, 1 letter)." });
-      return;
-    }
-    if (form.aadhaar.length !== 12) {
-      showAlert({ type: "warning", toast: true, title: "Aadhaar incomplete", text: "Aadhaar must be exactly 12 digits." });
-      return;
-    }
     if (form.password.length < 8) {
       showAlert({ type: "warning", toast: true, title: "Password too short", text: "Create a password of at least 8 characters." });
       return;
@@ -105,10 +96,8 @@ export default function SignupForm({
       showAlert({ type: "warning", toast: true, title: "Company name required", text: "Enter your company / organisation name." });
       return;
     }
-    if (role === "broker" && !form.rera.trim()) {
-      showAlert({ type: "warning", toast: true, title: "RERA number required", text: "Brokers must provide a RERA registration number." });
-      return;
-    }
+    // PAN, Aadhaar & RERA are no longer collected at signup — users complete
+    // KYC (with documents) from their dashboard after registering.
 
     setSubmitting(true);
     try {
@@ -396,32 +385,40 @@ export default function SignupForm({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">PAN</label>
-            <input
-              className="input uppercase"
-              required
-              maxLength={10}
-              value={form.pan}
-              onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })}
-              placeholder="ABCDE1234F"
-            />
-            {form.pan.length > 0 && !PAN_RE.test(form.pan) && (
-              <p className="text-xs text-rose-600 mt-1">Format: 5 letters, 4 digits, 1 letter.</p>
-            )}
-          </div>
-          <div>
-            <label className="label">Aadhaar (12 digits)</label>
-            <input className="input" required maxLength={12} inputMode="numeric" value={form.aadhaar} onChange={(e) => setForm({ ...form, aadhaar: e.target.value.replace(/\D/g, "") })} />
-          </div>
-        </div>
-
-        {role === "broker" && (
-          <div>
-            <label className="label">UP-RERA / State RERA registration number</label>
-            <input className="input" required value={form.rera} onChange={(e) => setForm({ ...form, rera: e.target.value })} placeholder="UPRERAAGT00XXXX" />
-            <p className="text-xs text-ink-500 mt-1">We verify your RERA via Surepass within 1 business day.</p>
+        {/* Creator social profiles — optional, shown only for the Creator role. */}
+        {role === "creator" && (
+          <div className="space-y-3 rounded-xl border border-ink-200 bg-ink-50/40 p-4">
+            <p className="text-sm font-semibold text-ink-800">Your social profiles <span className="font-normal text-ink-500">(optional)</span></p>
+            <div>
+              <label className="label">Instagram</label>
+              <input
+                className="input"
+                value={form.instagram}
+                onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+                placeholder="https://instagram.com/yourhandle"
+                inputMode="url"
+              />
+            </div>
+            <div>
+              <label className="label">Facebook</label>
+              <input
+                className="input"
+                value={form.facebook}
+                onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+                placeholder="https://facebook.com/yourpage"
+                inputMode="url"
+              />
+            </div>
+            <div>
+              <label className="label">YouTube</label>
+              <input
+                className="input"
+                value={form.youtube}
+                onChange={(e) => setForm({ ...form, youtube: e.target.value })}
+                placeholder="https://youtube.com/@yourchannel"
+                inputMode="url"
+              />
+            </div>
           </div>
         )}
 
@@ -436,7 +433,7 @@ export default function SignupForm({
             placeholder="PRAP-XXXXXX"
           />
           <p className="text-xs text-ink-500 mt-1">
-            Have a friend's code? You both earn {(5000).toLocaleString("en-IN")} PRAP Coins when you join.
+            Have a friend's code? They earn {(5000).toLocaleString("en-IN")} PRAP Coins when you join — you get your {(20000).toLocaleString("en-IN")} signup coins.
           </p>
         </div>
 

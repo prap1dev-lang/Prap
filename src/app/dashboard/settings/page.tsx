@@ -16,7 +16,7 @@ export default async function SettingsPage() {
     ? await admin
         .from("users")
         .select(
-          "name, email, phone, pan, role, rera_number, upi_id, bank_account, bank_ifsc, photo_url, has_password, pan_verified, aadhaar_verified, rera_verified",
+          "name, email, phone, pan, role, rera_number, upi_id, bank_account, bank_ifsc, photo_url, instagram, facebook, youtube, has_password, pan_verified, aadhaar_verified, rera_verified",
         )
         .eq("id", me.authId)
         .maybeSingle()
@@ -40,6 +40,9 @@ export default async function SettingsPage() {
     bank_account: data?.bank_account ?? "",
     bank_ifsc: data?.bank_ifsc ?? "",
     photo_url: data?.photo_url ?? docUrls.photo ?? null,
+    instagram: data?.instagram ?? "",
+    facebook: data?.facebook ?? "",
+    youtube: data?.youtube ?? "",
     pan_verified: !!data?.pan_verified,
     aadhaar_verified: !!data?.aadhaar_verified,
     rera_verified: !!data?.rera_verified,
@@ -59,7 +62,7 @@ export default async function SettingsPage() {
           <h2 className="font-bold">KYC documents</h2>
           <p className="mt-1 text-sm text-ink-500">
             Upload clear photos or PDFs. Files are stored securely and reviewed by our team.
-            Each file must be under 2&nbsp;MB.
+            Each file must be under 10&nbsp;MB.
           </p>
 
           <h3 className="mt-5 text-sm font-semibold text-ink-700">Aadhaar card</h3>

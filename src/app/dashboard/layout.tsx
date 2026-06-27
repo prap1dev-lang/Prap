@@ -10,7 +10,7 @@ const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
   { href: "/dashboard/bookings", label: "Bookings", icon: Calendar },
-  { href: "/dashboard/projects", label: "Projects", icon: Building2 },
+  { href: "/projects", label: "Browse properties", icon: Building2 },
   { href: "/dashboard/redeem", label: "Redeem", icon: HandCoins },
   { href: "/dashboard/settings", label: "Profile & settings", icon: Settings },
 ];

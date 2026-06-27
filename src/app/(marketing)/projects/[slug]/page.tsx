@@ -135,6 +135,26 @@ export default async function ProjectPage({ params }: Params) {
 
         <div className="bg-grid-fade">
         <div className="container py-6 sm:py-10">
+          {/* ── Full address (outside the cards) ── */}
+          {(() => {
+            const fullAddress = [
+              String(m.location ?? "").trim(),
+              p.sector,
+              p.city,
+              String(m.pincode ?? "").trim(),
+            ].filter(Boolean).join(", ");
+            if (!fullAddress) return null;
+            return (
+              <div className="mb-5 flex items-start gap-2 text-sm sm:text-base text-ink-700">
+                <MapPin className="h-5 w-5 flex-none text-brand-600 mt-0.5" />
+                <p>
+                  <span className="font-semibold text-ink-900">Address: </span>
+                  {fullAddress}
+                </p>
+              </div>
+            );
+          })()}
+
           {/* ── Quick stats band ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {stats.map((s) => {
