@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
+// A DB-backed suggestion (e.g. an existing project) shown above Google results.
+export interface DbSuggestion {
+  id: string;
+  label: string;       // primary line (project name)
+  sublabel?: string;   // secondary line (builder · location)
+}
+
 // Structured result emitted when a place is picked (or typed).
 export interface PlaceResult {
   formatted: string;   // full formatted address
@@ -77,6 +84,8 @@ export default function PlacesAutocomplete({
   placeholder,
   types,
   className = "input",
+  dbSuggest,
+  onPickDb,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -85,11 +94,17 @@ export default function PlacesAutocomplete({
   // e.g. ["geocode"], ["establishment"], or ["(regions)"] — defaults to broad.
   types?: string[];
   className?: string;
+  // Optional DB-backed suggestions shown ABOVE the Google ones (e.g. existing
+  // projects matching "DLF"). Called debounced as the user types.
+  dbSuggest?: (q: string) => Promise<DbSuggestion[]>;
+  onPickDb?: (s: DbSuggestion) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const acRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(!MAPS_KEY);
+  const [dbResults, setDbResults] = useState<DbSuggestion[]>([]);
+  const [showDb, setShowDb] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,13 +139,36 @@ export default function PlacesAutocomplete({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Debounced DB suggestions as the user types.
+  useEffect(() => {
+    if (!dbSuggest) return;
+    const q = value.trim();
+    if (q.length < 2) {
+      setDbResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const r = await dbSuggest(q);
+        setDbResults(r);
+        setShowDb(r.length > 0);
+      } catch {
+        setDbResults([]);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   return (
     <div className="relative">
       <input
         ref={inputRef}
         className={className}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); setShowDb(true); }}
+        onFocus={() => dbResults.length && setShowDb(true)}
+        onBlur={() => setTimeout(() => setShowDb(false), 150)}
         placeholder={placeholder}
         // Prevent the browser's native autofill dropdown from fighting Google's.
         autoComplete="off"
@@ -139,6 +177,33 @@ export default function PlacesAutocomplete({
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-ink-400">
           loading…
         </span>
+      )}
+
+      {/* DB suggestions (e.g. existing projects) shown above Google's dropdown */}
+      {dbSuggest && showDb && dbResults.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full rounded-xl border border-ink-200 bg-white shadow-lg overflow-hidden">
+          <li className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-400 bg-ink-50">
+            Your projects
+          </li>
+          {dbResults.map((s) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                // onMouseDown (not onClick) fires before the input's onBlur.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(s.label);
+                  onPickDb?.(s);
+                  setShowDb(false);
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-brand-50 transition"
+              >
+                <p className="text-sm font-medium text-ink-900">{s.label}</p>
+                {s.sublabel && <p className="text-xs text-ink-500">{s.sublabel}</p>}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

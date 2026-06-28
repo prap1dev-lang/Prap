@@ -4,6 +4,7 @@ import { buildMetadata } from "@/lib/seo";
 import { getSessionUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import ReferralCodeCard from "@/components/dashboard/ReferralCodeCard";
+import ReferralNodes from "@/components/dashboard/ReferralNodes";
 
 export const metadata = buildMetadata({ title: "Dashboard", path: "/dashboard", noIndex: true });
 export const dynamic = "force-dynamic";
@@ -21,16 +22,32 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
     : { data: null as any };
 
   // ── Referred profiles (people who signed up with this user's code) ──
-  // The programme rewards the first 5, so we surface up to 5 here.
+  // Nodes unlock in batches of 5: the next batch opens only once EVERY user in
+  // the current batch has completed a site visit. We fetch all referred users
+  // plus whether each has a completed visit/booking.
   const { data: referredRows } = me
     ? await admin
         .from("users")
-        .select("id, name, role, created_at")
+        .select("id, name, role, photo_url, created_at")
         .eq("referred_by", me.authId)
         .order("created_at", { ascending: true })
-        .limit(5)
     : { data: null as any };
-  const referred: { id: string; name: string; role: string }[] = referredRows ?? [];
+  const referredAll: { id: string; name: string; role: string; photo_url: string | null; created_at: string }[] =
+    referredRows ?? [];
+
+  // Which referred users have completed at least one site visit?
+  const visitedSet = new Set<string>();
+  if (me && referredAll.length) {
+    const ids = referredAll.map((u) => u.id);
+    const { data: visitRows } = await admin
+      .from("bookings")
+      .select("client_id, status, visits_completed")
+      .in("client_id", ids);
+    for (const b of visitRows ?? []) {
+      const done = b.status === "visited" || b.status === "booked" || Number(b.visits_completed ?? 0) >= 1;
+      if (done && b.client_id) visitedSet.add(b.client_id as string);
+    }
+  }
 
   // Aadhaar is verified by document upload (no UIDAI OTP). Check if one's on file.
   const { data: aadhaarDoc } = me
@@ -82,6 +99,16 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
   const completion = Math.round(
     (completionChecks.filter(Boolean).length / completionChecks.length) * 100,
   );
+
+  // ── Referral nodes (batches of 5 — unlock logic lives in <ReferralNodes/>) ──
+  const BATCH = 5;
+  const referredNodes = referredAll.map((u) => ({
+    id: u.id,
+    name: u.name || "PRAP member",
+    role: u.role,
+    photoUrl: u.photo_url,
+    visited: visitedSet.has(u.id),
+  }));
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -154,47 +181,12 @@ export default async function Dashboard({ searchParams }: { searchParams?: { rol
         </div>
       </section>
 
-      <ReferralCodeCard initialCode={refCode} role={role} />
+      <div id="referral-code">
+        <ReferralCodeCard initialCode={refCode} role={role} />
+      </div>
 
-      {/* ── Referred profiles (first 5 earn the sharer 5,000 coins each) ── */}
-      <section className="card p-6">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h2 className="font-bold">Your referrals</h2>
-          <span className="text-sm font-semibold text-ink-600">
-            {referred.length} / {REFERRAL_LIMIT}
-          </span>
-        </div>
-        <p className="mt-1 text-sm text-ink-500">
-          You earn 5,000 PRAP Coins for each of your first {REFERRAL_LIMIT} referrals.
-        </p>
-        {referred.length === 0 ? (
-          <p className="mt-4 text-sm text-ink-500">
-            No referrals yet. Share your code above — you earn 5,000 coins per signup.
-          </p>
-        ) : (
-          <ul className="mt-4 divide-y divide-ink-100">
-            {referred.map((u, i) => (
-              <li key={u.id} className="py-3 flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-brand-700 font-bold text-sm flex-none">
-                  {(u.name?.[0] || "?").toUpperCase()}
-                </span>
-                <div className="min-w-0">
-                  <p className="font-medium text-ink-900 truncate">{u.name || "PRAP member"}</p>
-                  <p className="text-xs text-ink-500 capitalize">{u.role}</p>
-                </div>
-                <span className="ml-auto badge !bg-emerald-50 !text-emerald-700 text-[11px]">
-                  +5,000 coins
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {referred.length >= REFERRAL_LIMIT && (
-          <p className="mt-3 text-xs text-ink-500">
-            You've reached the {REFERRAL_LIMIT}-referral reward limit. Thanks for spreading the word!
-          </p>
-        )}
-      </section>
+      {/* ── Referral network (nodes unlock in batches of 5) ── */}
+      <ReferralNodes nodes={referredNodes} batchSize={BATCH} />
 
       {role === "broker" && (
         <section className="card p-6">

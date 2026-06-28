@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   CheckCircle2, ChevronRight, ChevronLeft, Loader2, Upload, X,
   Building2, Scale, Home, Star, Wrench, MapPin,
@@ -661,6 +661,8 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
             city: KNOWN_CITIES.includes(body.city) ? body.city : "Other",
             sector: body.locality || f.sector,
             location: f.location || body.formatted || "",
+            lat: String(latitude),
+            lng: String(longitude),
           }));
         } catch (e: any) {
           setGeoError(e?.message || "Could not detect location.");
@@ -675,6 +677,15 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
   }
+
+  // Auto-prompt for device location on first mount (new listings only). The
+  // browser shows its native permission popup without the admin clicking the
+  // button; if they deny, the manual button still works.
+  useEffect(() => {
+    if (isEdit) return;
+    pickLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Overall completion: share of fillable fields that have a value, including
   // the four media uploads. `isListed` is a default toggle and not counted.
@@ -856,7 +867,7 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
               {geoError && <span className="text-xs text-rose-600">{geoError}</span>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <Field label="Project Name *" hint="Search the project/building on Google, or type it in">
+              <Field label="Project Name *" hint="Type a name (e.g. “DLF”) to match your projects, or search Google">
                 <PlacesAutocomplete
                   value={form.name}
                   onChange={set("name")}
@@ -865,8 +876,19 @@ export default function ProjectWizard({ initial }: { initial?: ProjectInitial } 
                     if (p.name) set("name")(p.name);
                     applyPlace(p);
                   }}
-                  placeholder="e.g. VVIP Namah"
+                  placeholder="e.g. DLF, VVIP Namah"
                   types={["establishment"]}
+                  dbSuggest={async (q) => {
+                    const res = await fetch(`/api/projects/search?q=${encodeURIComponent(q)}`);
+                    const body = await res.json().catch(() => ({}));
+                    if (!body.ok) return [];
+                    return (body.results as any[]).map((r) => ({
+                      id: r.slug,
+                      label: r.name,
+                      sublabel: [r.builder, r.location].filter(Boolean).join(" · "),
+                    }));
+                  }}
+                  onPickDb={(s) => set("name")(s.label)}
                 />
               </Field>
               <Field label="Developer / Builder Name *" hint="Start typing — pick from India's builders or enter your own">
